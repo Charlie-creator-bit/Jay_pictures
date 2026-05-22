@@ -1,0 +1,327 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based attributes and personal details",
+      "type": "object",
+      "properties": {
+        "fullName": {
+          "type": "string",
+          "description": "The full name of the user"
+        },
+        "email": {
+          "type": "string",
+          "description": "Unique email address associated with the user account"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "client"],
+          "description": "Access role controlling platform permissions"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp indicating when the profile was generated"
+        }
+      },
+      "required": ["fullName", "email", "role", "createdAt"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Offered photography package detail including cost and duration",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the photography service package"
+        },
+        "description": {
+          "type": "string",
+          "description": "Comprehensive outline of the photographic package deliverables"
+        },
+        "price": {
+          "type": "number",
+          "description": "Cost of the package in standard USD currency"
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "description": "Scheduled length of the photographic session in minutes"
+        },
+        "images": {
+          "type": "array",
+          "description": "Collection of storage paths or source URLs representing the service portfolio"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Toggles visibility and booking capability of the services"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp for audit trails"
+        }
+      },
+      "required": ["title", "description", "price", "durationMinutes", "isActive", "createdAt"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Scheduled photo session document mapping a client to a photography service",
+      "type": "object",
+      "properties": {
+        "clientId": {
+          "type": "string",
+          "description": "Unique identifier of the matching client user document"
+        },
+        "serviceId": {
+          "type": "string",
+          "description": "Unique identifier of the matching service document"
+        },
+        "bookingDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The target date and starting hour when session is scheduled"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed", "completed", "cancelled"],
+          "description": "The life cycle state of the photographic session entry"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Final price assigned to the booking including custom selections"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp of booking log"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Modification timestamp indicating status or slot changes"
+        }
+      },
+      "required": ["clientId", "serviceId", "bookingDate", "status", "totalAmount", "createdAt", "updatedAt"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Financial ledger record of a transaction logged against a client booking",
+      "type": "object",
+      "properties": {
+        "bookingId": {
+          "type": "string",
+          "description": "Unique identifier reference to the associated Booking"
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Reference identifier mapping directly to the payor User"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Paid transaction monetary amount value"
+        },
+        "currency": {
+          "type": "string",
+          "description": "Standard 3-letter currency code, default is USD"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "paid", "failed", "refunded"],
+          "description": "Current processing status of the logged transaction"
+        },
+        "stripePaymentIntentId": {
+          "type": "string",
+          "description": "Stripe-provided reference code linking to processed payment gateway transaction"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The exact date and time the payment ledger entry was processed"
+        }
+      },
+      "required": ["bookingId", "clientId", "amount", "currency", "status", "createdAt"]
+    },
+    "Gallery": {
+      "title": "Gallery",
+      "description": "Set of final imagery collections delivered to the client for viewing and download",
+      "type": "object",
+      "properties": {
+        "bookingId": {
+          "type": "string",
+          "description": "Referenced booking matching this delivered image library"
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Client user document reference mapping to library owner"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title name assigned to the delivery folder"
+        },
+        "description": {
+          "type": "string",
+          "description": "Short contextual details or private notes of the digital drop"
+        },
+        "photos": {
+          "type": "array",
+          "description": "List of delivered direct secure cloud storage URLs"
+        },
+        "isPrivate": {
+          "type": "boolean",
+          "description": "Secures portfolio so it is exclusive to the designated client and admins only"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date-time stamp of physical image distribution record"
+        }
+      },
+      "required": ["bookingId", "clientId", "title", "photos", "isPrivate", "createdAt"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "A review or recommendation form provided by clients following package completion",
+      "type": "object",
+      "properties": {
+        "clientId": {
+          "type": "string",
+          "description": "Referenced client user identifier writing the review"
+        },
+        "bookingId": {
+          "type": "string",
+          "description": "Unique booking reference corresponding to the completed session"
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Sign-off name used on client facing testimonial display grids"
+        },
+        "rating": {
+          "type": "integer",
+          "description": "Numerical rating representation from 1 (lowest) to 5 (highest)"
+        },
+        "feedback": {
+          "type": "string",
+          "description": "Textual review comment detailing studio performance"
+        },
+        "isApproved": {
+          "type": "boolean",
+          "description": "Toggled by Admin to control direct visibility in open landing pages"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Chronological stamp indicating when the testimonial was filed"
+        }
+      },
+      "required": ["clientId", "bookingId", "fullName", "rating", "feedback", "isApproved", "createdAt"]
+    },
+    "Availability": {
+      "title": "Availability",
+      "description": "Studio scheduling calendar slots with assigned states",
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "Target calendar schedule date value"
+        },
+        "time": {
+          "type": "string",
+          "description": "Start hour of standard studio session slot block, e.g., '14:00'"
+        },
+        "isBooked": {
+          "type": "boolean",
+          "description": "True if slot is matched to a validated non-cancelled client booking"
+        },
+        "bookingId": {
+          "type": "string",
+          "description": "Optional booking identifier reference when isBooked is true"
+        }
+      },
+      "required": ["date", "time", "isBooked"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A notification alert standard entity targeted to a unique recipient",
+      "type": "object",
+      "properties": {
+        "recipientId": {
+          "type": "string",
+          "description": "Unique user recipient identifier doc mapping or literal 'admin'"
+        },
+        "title": {
+          "type": "string",
+          "description": "Headline text summarizing the system update"
+        },
+        "message": {
+          "type": "string",
+          "description": "Expanded body text describing the status detail"
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "Unread indicator mapping to control visual badge indicators"
+        },
+        "type": {
+          "type": "string",
+          "description": "System event type category identifier triggers, e.g. 'booking_new'"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Trigger date-time stamp of physical notification log entry"
+        }
+      },
+      "required": ["recipientId", "title", "message", "isRead", "type", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Database archive containing authenticated system users including clients and admins"
+    },
+    "services": {
+      "schema": {
+        "$ref": "#/entities/Service"
+      },
+      "description": "Active studio photo packages list managed by admins"
+    },
+    "bookings": {
+      "schema": {
+        "$ref": "#/entities/Booking"
+      },
+      "description": "All scheduled photo session entries linking client, service, and session times"
+    },
+    "payments": {
+      "schema": {
+        "$ref": "#/entities/Payment"
+      },
+      "description": "Chronological client transaction receipts logged on platform bookings"
+    },
+    "galleries": {
+      "schema": {
+        "$ref": "#/entities/Gallery"
+      },
+      "description": "Photographic galleries distributed to specific clients"
+    },
+    "testimonials": {
+      "schema": {
+        "$ref": "#/entities/Testimonial"
+      },
+      "description": "Client reviews submitted for completed photo shoot sessions"
+    },
+    "availability": {
+      "schema": {
+        "$ref": "#/entities/Availability"
+      },
+      "description": "Standard studio schedule slots controlling client picker calendars"
+    },
+    "notifications": {
+      "schema": {
+        "$ref": "#/entities/Notification"
+      },
+      "description": "Platform alerts pushed to unique client accounts or global admin team"
+    }
+  }
+}
