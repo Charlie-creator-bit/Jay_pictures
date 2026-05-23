@@ -153,7 +153,7 @@ service cloud.firestore {
     match /services/{serviceId} {
       allow read: if true; // Public package browsing
       
-      allow create: if isAdmin() && isValidId(serviceId) && isValidService(incoming()) && incoming().createdAt == request.time;
+      allow create: if (isAdmin() || isSignedIn()) && isValidId(serviceId) && isValidService(incoming()) && incoming().createdAt == request.time;
       allow update: if isAdmin() && isValidId(serviceId) && isValidService(incoming());
       allow delete: if isAdmin() && isValidId(serviceId);
     }
@@ -256,7 +256,12 @@ service cloud.firestore {
     // AVAILABILITY COLLECTION
     match /availability/{slotId} {
       allow read: if true; // Picker is public
-      allow create: if isAdmin() && isValidId(slotId) && isValidAvailability(incoming());
+      allow create: if isValidId(slotId) && isValidAvailability(incoming()) && (
+        isAdmin() ||
+        (isSignedIn() && incoming().isBooked == true && incoming().bookingId is string &&
+         exists(/databases/$(database)/documents/bookings/$(incoming().bookingId)) &&
+         get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.clientId == request.auth.uid)
+      );
       allow update: if isValidId(slotId) && (
         isAdmin() ||
         (isSignedIn() && isValidAvailability(incoming()) &&

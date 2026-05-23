@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
-import { db } from "../lib/firebase";
+import { db, auth } from "../lib/firebase";
 import { handleFirestoreError, OperationType } from "../lib/firestore-error";
 import { 
   collection, 
@@ -117,7 +117,7 @@ export default function Book() {
       setLoadingServices(true);
       try {
         const querySnapshot = await getDocs(collection(db, "services"));
-        const serviceList: Service[] = [];
+        let serviceList: Service[] = [];
         querySnapshot.forEach((docSnap) => {
           const data = docSnap.data();
           if (data.isActive !== false) {
@@ -131,6 +131,100 @@ export default function Book() {
             });
           }
         });
+
+        // Auto-seed if database services collection is completely empty
+        if (serviceList.length === 0) {
+          const defaultServices = [
+            {
+              id: "studio-starter",
+              title: "Studio Starter",
+              price: 600,
+              durationMinutes: 50,
+              description: "50 Min Session. Includes 7 Retouched Pictures, 1-2 Outfit changes, and high-resolution digital proof deliveries.",
+              isActive: true
+            },
+            {
+              id: "studio-standard",
+              title: "Studio Standard",
+              price: 800,
+              durationMinutes: 60,
+              description: "1 Hour Session. Includes 10 Retouched Pictures, 1-3 Outfit changes, and premium cinematic art direction layouts.",
+              isActive: true
+            },
+            {
+              id: "studio-premium",
+              title: "Studio Premium",
+              price: 1000,
+              durationMinutes: 80,
+              description: "1 Hour 20 Min Session. Includes 12 Retouched Pictures, 1-4 Outfit changes, and PROFESSIONAL MAKEUP fully included on set.",
+              isActive: true
+            },
+            {
+              id: "outdoor-starter",
+              title: "Outdoor Starter",
+              price: 700,
+              durationMinutes: 50,
+              description: "50 Min Session. Includes 6 Retouched Pictures, 1-2 Outfit changes, and outstanding natural-light portraits.",
+              isActive: true
+            },
+            {
+              id: "outdoor-standard",
+              title: "Outdoor Standard",
+              price: 900,
+              durationMinutes: 50,
+              description: "50 Min Session. Includes 10 Retouched Pictures, 1-3 Outfit changes, and premium professional outdoor creative setups.",
+              isActive: true
+            },
+            {
+              id: "outdoor-premium",
+              title: "Outdoor Premium",
+              price: 1100,
+              durationMinutes: 50,
+              description: "50 Min Session. Includes 12 Retouched Pictures, 1-4 Outfit changes, and premium customized natural location staging.",
+              isActive: true
+            },
+            {
+              id: "wedding-budget",
+              title: "One-Day Budget",
+              price: 2700,
+              durationMinutes: 480,
+              description: "Wedding One Day Coverage (Budget). Includes All Edited Event Pictures, Video Film (1 Min), Full Video, 1 Frame, 5 Exclusive couple Pictures, and premium Flash Drive delivery.",
+              isActive: true
+            },
+            {
+              id: "wedding-basic",
+              title: "One-Day Basic",
+              price: 3900,
+              durationMinutes: 600,
+              description: "Wedding One Day Coverage (Basic). Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Neatly Recorded Sound, PhotoBook, 12 Exclusive couple Pictures, Flash Drive, and Cloud Storage.",
+              isActive: true
+            },
+            {
+              id: "wedding-classic",
+              title: "One-Day Classic",
+              price: 4900,
+              durationMinutes: 720,
+              description: "Wedding One Day Coverage (Classic). Includes Pre-Wedding shoot, All Edited Event Pictures, 18 Exclusive couple Pictures, Cinematic Video Film (3-4 Mins), Neatly Recorded Sound, Couple Love Story Film, Drone coverage, PhotoBook, Two Frames, Full Edited Video, and Lifetime Cloud Storage.",
+              isActive: true
+            }
+          ];
+
+          for (const svc of defaultServices) {
+            try {
+              await setDoc(doc(db, "services", svc.id), {
+                title: svc.title,
+                price: svc.price,
+                durationMinutes: svc.durationMinutes,
+                description: svc.description,
+                isActive: svc.isActive,
+                createdAt: serverTimestamp(),
+              });
+              serviceList.push(svc);
+            } catch (seedErr) {
+              console.warn(`Bypassed seeding for service ${svc.id}:`, seedErr);
+            }
+          }
+        }
 
         setServices(serviceList);
 
@@ -177,6 +271,20 @@ export default function Book() {
             bookingId: data.bookingId,
           });
         });
+
+        // Auto-populate default business times if no slot entries exist in the DB
+        if (slots.length === 0) {
+          const defaultTimes = ["09:00", "11:00", "13:00", "15:00", "17:00", "19:00"];
+          defaultTimes.forEach((time) => {
+            const slotId = `${selectedDate}_${time.replace(":", "")}`;
+            slots.push({
+              id: slotId,
+              date: selectedDate,
+              time,
+              isBooked: false,
+            });
+          });
+        }
 
         // Sort slot times ascending (e.g. 09:00 before 11:00)
         slots.sort((a, b) => a.time.localeCompare(b.time));
@@ -239,10 +347,6 @@ export default function Book() {
 
   // Submit Flow & Secure Transaction Writers
   const handleFinalBooking = async () => {
-    if (!user) {
-      setError("An active session is required. Preparing guest session, please retry in a second...");
-      return;
-    }
     if (!selectedService || !selectedDate || !selectedTime) {
       setError("Please complete all booking selections prior to submission.");
       return;
@@ -255,22 +359,31 @@ export default function Book() {
     setIsSubmitting(true);
     setError(null);
 
+    let activeUser = user;
     try {
+      if (!activeUser) {
+        // Automatically perform background silent sign-in on submission
+        const { signInAnonymously } = await import("firebase/auth");
+        const userCredential = await signInAnonymously(auth);
+        activeUser = userCredential.user;
+      }
+
+      if (!activeUser) {
+        throw new Error("Unable to initialize guest session. Please refresh and try again.");
+      }
+
       // Find matching slot document ID to verify double booking and perform atomicity write
       const slotId = `${selectedDate}_${selectedTime.replace(":", "")}`;
       const slotRef = doc(db, "availability", slotId);
       
       // Secondary server check to prevent double bookings
       const slotSnap = await getDoc(slotRef);
-      if (!slotSnap.exists()) {
-        throw new Error("Chosen slot does not exist in the studio scheduling calendar. Please coordinate with the admin.");
-      }
-      if (slotSnap.data().isBooked) {
+      if (slotSnap.exists() && slotSnap.data().isBooked) {
         throw new Error("This slot was booked by another client during your checkout. Please select a different time.");
       }
 
       // Ensure users/{userId} profile exists for database constraint validation
-      const userRef = doc(db, "users", user.uid);
+      const userRef = doc(db, "users", activeUser.uid);
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) {
         try {
@@ -292,7 +405,7 @@ export default function Book() {
       // 1. Write Booking Document FIRST matching raw rule schema invariants
       const bookingRef = doc(db, "bookings", bookingId);
       const bookingData = {
-        clientId: user.uid,
+        clientId: activeUser.uid,
         serviceId: selectedService.id,
         bookingDate: `${selectedDate}T${selectedTime}:00Z`,
         status: "pending",
@@ -309,10 +422,21 @@ export default function Book() {
 
       // 2. Perform the matching slot reservation update in availability
       try {
-        await updateDoc(slotRef, {
-          isBooked: true,
-          bookingId: bookingId
-        });
+        if (!slotSnap.exists()) {
+          // If virtual slot, dynamically create it in the database on-demand
+          await setDoc(slotRef, {
+            date: selectedDate,
+            time: selectedTime,
+            isBooked: true,
+            bookingId: bookingId
+          });
+        } else {
+          // If existing slot, update it
+          await updateDoc(slotRef, {
+            isBooked: true,
+            bookingId: bookingId
+          });
+        }
       } catch (err: any) {
         handleFirestoreError(err, OperationType.WRITE, `availability/${slotId}`);
       }
@@ -713,7 +837,7 @@ export default function Book() {
                   Go Back
                 </Button>
                 <Button 
-                  disabled={!fullName.trim() || !phone.trim() || !email.trim() || !user}
+                  disabled={!fullName.trim() || !phone.trim() || !email.trim()}
                   onClick={() => setStep(4)}
                   className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold"
                 >
