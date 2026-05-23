@@ -79,7 +79,7 @@ export default function Navbar() {
             )
           )}
           
-          {user ? (
+          {user && !user.isAnonymous ? (
             <div className="flex items-center gap-6">
               <Link 
                 to={role === "admin" ? "/admin" : "/dashboard"}
@@ -88,16 +88,30 @@ export default function Navbar() {
                 <User className="w-3 h-3 text-luxury-gold" />
                 Dashboard
               </Link>
-              {user && !user.isAnonymous && (
-                <button
-                  onClick={handleLogout}
-                  className="text-white/40 hover:text-red-400 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              )}
+              <button
+                onClick={handleLogout}
+                className="text-white/40 hover:text-red-400 transition-colors hover:scale-105 transform active:scale-95 duration-100"
+                title="Log Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
-          ) : null}
+          ) : (
+            <div className="flex items-center gap-4">
+              <Link 
+                to="/login"
+                className="text-[11px] uppercase tracking-[0.2em] font-medium text-white/70 hover:text-luxury-gold transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link 
+                to="/register"
+                className="py-2 px-4 bg-white/5 border border-white/10 rounded-lg text-[10px] uppercase tracking-widest font-bold text-luxury-gold hover:bg-white/10 transition-colors"
+              >
+                Register
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Mobile Menu Toggle */}
@@ -139,7 +153,7 @@ export default function Navbar() {
                   </a>
                 )
               )}
-              {user ? (
+              {user && !user.isAnonymous ? (
                 <>
                   <Link 
                     to={role === "admin" ? "/admin" : "/dashboard"}
@@ -148,19 +162,34 @@ export default function Navbar() {
                   >
                     Dashboard
                   </Link>
-                  {user && !user.isAnonymous && (
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="text-lg font-medium tracking-widest uppercase text-red-500 text-left"
-                    >
-                      Logout
-                    </button>
-                  )}
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="text-lg font-medium tracking-widest uppercase text-red-500 text-left"
+                  >
+                    Logout
+                  </button>
                 </>
-              ) : null}
+              ) : (
+                <>
+                  <Link 
+                    to="/login"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-lg font-medium tracking-widest uppercase text-white/70 hover:text-luxury-gold text-left"
+                  >
+                    Sign In
+                  </Link>
+                  <Link 
+                    to="/register"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-lg font-medium tracking-widest uppercase text-luxury-gold text-left"
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         )}

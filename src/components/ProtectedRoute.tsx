@@ -16,7 +16,7 @@ export default function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     );
   }
 
-  if (!user) {
+  if (!user || user.isAnonymous) {
     return <Navigate to="/login" replace />;
   }
 

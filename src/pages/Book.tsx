@@ -682,14 +682,18 @@ export default function Book() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">My Coordinate Email (Sign-in target)</label>
+                  <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">My Email Address</label>
                   <input
-                    disabled
+                    type="email"
                     value={email}
-                    className="w-full bg-white/2 border border-white/5 text-white/50 rounded-lg py-3 px-4 cursor-not-allowed"
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={user && !user.isAnonymous && !!user.email}
+                    className={`w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-luxury-gold transition-colors ${
+                      user && !user.isAnonymous && user.email ? "bg-white/2 border-white/5 text-white/50 cursor-not-allowed" : ""
+                    }`}
                     placeholder="jane@example.com"
                   />
-                  <p className="text-[9px] text-white/30 tracking-wide mt-1.5">Email linked to active logged session profile.</p>
+                  <p className="text-[9px] text-white/30 tracking-wide mt-1.5">Where we will coordinate your booking confirmation and session deliverables.</p>
                 </div>
 
                 <div className="md:col-span-2">
@@ -947,9 +951,11 @@ export default function Book() {
                 <Button variant="outline" onClick={() => navigate("/")} className="text-[10px] uppercase tracking-widest font-bold">
                   Return to Home
                 </Button>
-                <Button onClick={() => navigate("/dashboard")} className="text-[10px] uppercase tracking-widest font-bold">
-                  Go to my Dashboard
-                </Button>
+                {user && !user.isAnonymous && (
+                  <Button onClick={() => navigate("/dashboard")} className="text-[10px] uppercase tracking-widest font-bold">
+                    Go to my Dashboard
+                  </Button>
+                )}
               </div>
             </motion.div>
           )}

@@ -331,27 +331,268 @@ export default function AdminDashboard() {
     try {
       const servicesList = [
         {
-          id: "editorial",
-          title: "Editorial Collection",
-          price: 1500,
-          durationMinutes: 240,
-          description: "4 Hour Studio Session. Specialized in portrait character styling with rich cinematic lighting, Rembrandt frames, and commercial-grade usage permission.",
+          id: "studio-starter",
+          title: "Studio Starter",
+          price: 600,
+          durationMinutes: 50,
+          description: "50 Min Session. Includes 7 Retouched Pictures, 1-2 Outfit changes, and high-resolution digital proof deliveries.",
           isActive: true
         },
         {
-          id: "cinematic",
-          title: "Cinematic Collection",
-          price: 3500,
+          id: "studio-standard",
+          title: "Studio Standard",
+          price: 800,
+          durationMinutes: 60,
+          description: "1 Hour Session. Includes 10 Retouched Pictures, 1-3 Outfit changes, and premium cinematic art direction layouts.",
+          isActive: true
+        },
+        {
+          id: "studio-premium",
+          title: "Studio Premium",
+          price: 1000,
+          durationMinutes: 80,
+          description: "1 Hour 20 Min Session. Includes 12 Retouched Pictures, 1-4 Outfit changes, and PROFESSIONAL MAKEUP fully included on set.",
+          isActive: true
+        },
+        {
+          id: "outdoor-starter",
+          title: "Outdoor Starter",
+          price: 700,
+          durationMinutes: 50,
+          description: "50 Min Session. Includes 6 Retouched Pictures, 1-2 Outfit changes, and outstanding natural-light portraits.",
+          isActive: true
+        },
+        {
+          id: "outdoor-standard",
+          title: "Outdoor Standard",
+          price: 900,
+          durationMinutes: 50,
+          description: "50 Min Session. Includes 10 Retouched Pictures, 1-3 Outfit changes, and premium professional outdoor creative setups.",
+          isActive: true
+        },
+        {
+          id: "outdoor-premium",
+          title: "Outdoor Premium",
+          price: 1100,
+          durationMinutes: 50,
+          description: "50 Min Session. Includes 12 Retouched Pictures, 1-4 Outfit changes, and premium customized natural location staging.",
+          isActive: true
+        },
+        {
+          id: "wedding-budget",
+          title: "One-Day Budget",
+          price: 2700,
           durationMinutes: 480,
-          description: "Full Day Location Shoot. Complete with our master styling team, 25 high-end physical prints, atmospheric BTS footage, and private heirloom archiving.",
+          description: "Wedding One Day Coverage (Budget). Includes All Edited Event Pictures, Video Film (1 Min), Full Video, 1 Frame, 5 Exclusive couple Pictures, and premium Flash Drive delivery.",
           isActive: true
         },
         {
-          id: "curated",
-          title: "Curated Collection",
-          price: 7500,
+          id: "wedding-basic",
+          title: "One-Day Basic",
+          price: 3900,
+          durationMinutes: 600,
+          description: "Wedding One Day Coverage (Basic). Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Neatly Recorded Sound, PhotoBook, 12 Exclusive couple Pictures, Flash Drive, and Cloud Storage.",
+          isActive: true
+        },
+        {
+          id: "wedding-classic",
+          title: "One-Day Classic",
+          price: 4900,
           durationMinutes: 720,
-          description: "Multi-Day Destination Shoot. Includes comprehensive styling direction, infinite museum-grade physical frames, leather binder, and personal art support.",
+          description: "Wedding One Day Coverage (Classic). Includes Pre-Wedding shoot, All Edited Event Pictures, 18 Exclusive couple Pictures, Cinematic Video Film (3-4 Mins), Neatly Recorded Sound, Couple Love Story Film, Drone coverage, PhotoBook, Two Frames, Full Edited Video, and Lifetime Cloud Storage.",
+          isActive: true
+        },
+
+        {
+          id: "wedding-2d-budget",
+          title: "Two-Day Budget",
+          price: 3500,
+          durationMinutes: 960,
+          description: "Wedding Two Day Coverage (Budget). Includes All Edited Event Pictures, Trailer Film (2 Mins), Full Video, 8 Exclusive couple Pictures, and Flash Drive folder.",
+          isActive: true
+        },
+        {
+          id: "wedding-2d-basic",
+          title: "Two-Day Basic",
+          price: 4900,
+          durationMinutes: 1200,
+          description: "Wedding Two Day Coverage (Basic). Includes All Edited Event Pictures, Trailer Film (3 Mins), Neatly Recorded Sound, PhotoBook, 12 Exclusive couple Pictures, Flash Drive, and Cloud Storage (Lifetime Access).",
+          isActive: true
+        },
+        {
+          id: "wedding-2d-classic",
+          title: "Two-Day Classic",
+          price: 6900,
+          durationMinutes: 1440,
+          description: "Wedding Two Day Coverage (Classic). Includes Pre-Wedding shoot, All Edited Event Pictures, 20 Exclusive couple Pictures, Cinematic Video Film (3-4 Mins), Neatly Recorded Sound, Couple Love Story Interview, Drone coverage, PhotoBook, Two Frames, Full Edited Video, and Lifetime Cloud Storage.",
+          isActive: true
+        },
+        {
+          id: "funeral-basic",
+          title: "Funeral Basic",
+          price: 2500,
+          durationMinutes: 480,
+          description: "Funeral One Day Coverage (Basic). Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, high-performance Flash Drive, and Extra crew Members option.",
+          isActive: true
+        },
+        {
+          id: "funeral-diamond",
+          title: "Funeral Diamond",
+          price: 3500,
+          durationMinutes: 600,
+          description: "Funeral One Day Coverage (Diamond). Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Neatly Recorded Sound, PhotoBook, 12 Exclusive Portrait/Family Pictures, Flash Drive, and Extra crew Members option.",
+          isActive: true
+        },
+        {
+          id: "funeral-classic",
+          title: "Funeral Classic",
+          price: 4900,
+          durationMinutes: 720,
+          description: "Funeral One Day Coverage (Classic). Includes All Edited Event Pictures, Cinematic Video Highlight (3-4 Mins), Neatly Recorded Sound, Drone coverage, Premium PhotoBook, Two Custom Frames, Full Edited Video, and Cloud Storage (Lifetime Access).",
+          isActive: true
+        },
+        {
+          id: "funeral-2d-basic",
+          title: "Funeral 2D Basic",
+          price: 3200,
+          durationMinutes: 960,
+          description: "Funeral Two Day Coverage (Basic). Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Flash Drive, and Extra crew Members option.",
+          isActive: true
+        },
+        {
+          id: "funeral-2d-diamond",
+          title: "Funeral 2D Diamond",
+          price: 4900,
+          durationMinutes: 1200,
+          description: "Funeral Two Day Coverage (Diamond). Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Neatly Recorded Sound, PhotoBook, 12 Exclusive Portrait/Family Pictures, Flash Drive, and Extra crew Members option.",
+          isActive: true
+        },
+        {
+          id: "funeral-2d-classic",
+          title: "Funeral 2D Classic",
+          price: 6900,
+          durationMinutes: 1440,
+          description: "Funeral Two Day Coverage (Classic). Includes All Edited Event Pictures, Cinematic Video Highlight (3-4 Mins), Neatly Recorded Sound, Drone coverage, PhotoBook, Two Frames, Full Edited Video, and Cloud Storage (Lifetime Access). Extra crew Members option.",
+          isActive: true
+        },
+        {
+          id: "funeral-3d-basic",
+          title: "Funeral 3D Basic",
+          price: 4800,
+          durationMinutes: 1440,
+          description: "Funeral Three Day Coverage (Basic). Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Flash Drive, and Extra crew Members option.",
+          isActive: true
+        },
+        {
+          id: "funeral-3d-diamond",
+          title: "Funeral 3D Diamond",
+          price: 6900,
+          durationMinutes: 1800,
+          description: "Funeral Three Day Coverage (Diamond). Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Neatly Recorded Sound, PhotoBook, 12 Exclusive couple Pictures, Flash Drive, and Extra crew Members option.",
+          isActive: true
+        },
+        {
+          id: "funeral-3d-classic",
+          title: "Funeral 3D Classic",
+          price: 8900,
+          durationMinutes: 2160,
+          description: "Funeral Three Day Coverage (Classic). Includes All Edited Event Pictures, Cinematic Video Highlight (3-4 Mins), Neatly Recorded Sound, Drone coverage, PhotoBook, Full Edited Video, and Cloud Storage (Lifetime Access). Extra crew Members option.",
+          isActive: true
+        },
+        {
+          id: "corporate-photo-only",
+          title: "Corporate Photo Only",
+          price: 1000,
+          durationMinutes: 480,
+          description: "Corporate 1-Day coverage (Photo Only). Includes all edited corporate pictures, high-resolution digital delivery, professional editing, 1 senior photographer.",
+          isActive: true
+        },
+        {
+          id: "corporate-photo-video-standard",
+          title: "Corporate Photo & Video Standard",
+          price: 2000,
+          durationMinutes: 480,
+          description: "Corporate 1-Day coverage (Photo & Video). Includes all edited corporate pictures, HD video highlight film, full video coverage, audio recording, 1 photographer & 1 videographer.",
+          isActive: true
+        },
+        {
+          id: "corporate-photo-video-deluxe",
+          title: "Corporate Photo & Video Deluxe",
+          price: 2500,
+          durationMinutes: 480,
+          description: "Corporate 1-Day coverage (Photo & Video Deluxe). Includes all edited corporate pictures, enhanced video highlight film, full comprehensive video, multi-angle audio recording, 1 photographer & 2 videographers.",
+          isActive: true
+        },
+        {
+          id: "corporate-2d-photo-only",
+          title: "Corporate-2D Photo Only",
+          price: 1800,
+          durationMinutes: 960,
+          description: "Corporate 2-Day coverage (Photo Only). Includes all edited corporate pictures, high-resolution digital delivery, professional editing, 1 senior photographer.",
+          isActive: true
+        },
+        {
+          id: "corporate-2d-photo-video-standard",
+          title: "Corporate-2D Photo & Video Standard",
+          price: 2900,
+          durationMinutes: 960,
+          description: "Corporate 2-Day coverage (Photo & Video). Includes all edited corporate pictures, HD video highlight film, full video coverage, audio recording, 1 photographer & 1 videographer.",
+          isActive: true
+        },
+        {
+          id: "corporate-2d-photo-video-deluxe",
+          title: "Corporate-2D Photo & Video Deluxe",
+          price: 3900,
+          durationMinutes: 960,
+          description: "Corporate 2-Day coverage (Photo & Video Deluxe). Includes all edited corporate pictures, premium video highlight film, full video, audio recording, 1 photographer & 2 videographers.",
+          isActive: true
+        },
+        {
+          id: "kids-studio-starter",
+          title: "Kids-Studio Starter",
+          price: 600,
+          durationMinutes: 50,
+          description: "Bespoke child-friendly studio experience. Includes 7 Retouched Pictures, 1-2 Outfit changes, and creative backdrops.",
+          isActive: true
+        },
+        {
+          id: "kids-studio-gold",
+          title: "Kids-Studio Gold",
+          price: 700,
+          durationMinutes: 50,
+          description: "Our signature child-friendly studio session. Includes 9 Retouched Pictures, 1-3 Outfit changes, and custom themed setups with props.",
+          isActive: true
+        },
+        {
+          id: "kids-studio-luxury",
+          title: "Kids-Studio Luxury",
+          price: 900,
+          durationMinutes: 50,
+          description: "Premium elite child studio session. Includes 12 Retouched Pictures, 1-4 Outfit changes, themed prop setups, and custom child styles.",
+          isActive: true
+        },
+        {
+          id: "kids-outdoor-starter",
+          title: "Kids-Outdoor Starter",
+          price: 900,
+          durationMinutes: 60,
+          description: "Natural daylight outdoor scenery or cozy home setting. Includes 7 Retouched Pictures and 1-2 Outfit changes.",
+          isActive: true
+        },
+        {
+          id: "kids-outdoor-gold",
+          title: "Kids-Outdoor Gold",
+          price: 1000,
+          durationMinutes: 60,
+          description: "Advanced natural child setting or home cozy setups. Includes 9 Retouched Pictures, 1-3 Outfit changes, and play capture setup.",
+          isActive: true
+        },
+        {
+          id: "kids-outdoor-luxury",
+          title: "Kids-Outdoor Luxury",
+          price: 1200,
+          durationMinutes: 60,
+          description: "Elite children location scenery photoshoot. Includes 12 Retouched Pictures, 1-4 Outfit changes, custom location props, and custom family styling.",
           isActive: true
         }
       ];

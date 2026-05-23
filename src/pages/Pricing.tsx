@@ -7,72 +7,629 @@ import {
 import { Link } from "react-router-dom";
 import Button from "../components/ui/Button.tsx";
 
-const tiers = [
-  {
-    name: "Editorial Heritage",
-    price: 1500,
-    priceLabel: "$1,500+",
-    duration: "4 Hour Session",
-    popular: false,
-    subtitle: "Ideal for artists, editorial essays, and high-quality portraits.",
-    features: [
-      "Dedicated Creative Art Direction",
-      "Rembrandt and Classic Studio Setups",
-      "Up to 3 distinct outfit changes",
-      "10 High-End Retouched master files",
-      "Private password-secured online gallery",
-      "Premium digital delivery (uncompressed TIFF)",
-      "Standard Commercial Usage License"
-    ]
-  },
-  {
-    name: "Cinematic Narrative",
-    price: 3500,
-    priceLabel: "$3,500+",
-    duration: "Full Day Location Shoot",
-    popular: true,
-    subtitle: "Our signature production capturing cinematic motion & brand stories.",
-    features: [
-      "All-day location multi-scene setup",
-      "Full on-site Styling and Makeup Team",
-      "25 Master-Retouched physical prints",
-      "Premium 60s Cinematic BTS Motion Film",
-      "Hand-bound Archival Gallery Photo Album",
-      "Extended Commercial Exhibition License",
-      "Unlimited digital proofs of original captures"
-    ]
-  },
-  {
-    name: "Curated Exhibition",
-    price: 7500,
-    priceLabel: "$7,500+",
-    duration: "Multi-Day Assignment",
-    popular: false,
-    subtitle: "The absolute pinnacle of high-end photography and book collections.",
-    features: [
-      "Multi-day national/international travel",
-      "Complete photography production crew",
-      "Unlimited master-retouched visual files",
-      "Exquisite Italian leather-bound print album",
-      "Personal public physical exhibition design assistance",
-      "Full Buyout Corporate Usage License",
-      "Dedicated premium darkroom developer consultant"
-    ]
-  }
-];
+const categories = {
+  studio: [
+    {
+      name: "Studio Starter",
+      price: 600,
+      priceLabel: "GH₵600",
+      duration: "50 Min Session",
+      popular: false,
+      subtitle: "Ideal for fast portrait setups and premium high-quality headshots.",
+      features: [
+        "7 Retouched Pictures",
+        "1-2 Outfit changes",
+        "50 Minutes dedicated studio session",
+        "Classic studio setup and backdrops",
+        "High-resolution digital delivery",
+        "Private password-secured online gallery",
+        "Standard client usage rights"
+      ]
+    },
+    {
+      name: "Studio Standard",
+      price: 800,
+      priceLabel: "GH₵800",
+      duration: "1 Hour Session",
+      popular: true,
+      subtitle: "Our signature time-frame for multi-angle creative fine art portraits.",
+      features: [
+        "10 Retouched Pictures",
+        "1-3 Outfit changes",
+        "1 Hour professional studio session",
+        "Bespoke dramatic lighting directions",
+        "Full premium color-graded proofs",
+        "Private password-secured online gallery",
+        "Commercial display license registry"
+      ]
+    },
+    {
+      name: "Studio Premium",
+      price: 1000,
+      priceLabel: "GH₵1,000",
+      duration: "1Hr 20Min Session",
+      popular: false,
+      subtitle: "The complete elite package with personal makeup artist fully included on set.",
+      features: [
+        "12 Retouched Pictures",
+        "1-4 Outfit changes",
+        "1 Hour 20 Minutes studio session",
+        "PROFESSIONAL MAKEUP INCLUDED",
+        "Complete bespoke creative art styling",
+        "Private password-secured online gallery",
+        "Premium darkroom print sample included",
+        "Full extended commercial buyout rights"
+      ]
+    }
+  ],
+  outdoor: [
+    {
+      name: "Outdoor Starter",
+      price: 700,
+      priceLabel: "GH₵700",
+      duration: "50 Min Session",
+      popular: false,
+      subtitle: "Capturing natural lighting brilliance on real locations with style.",
+      features: [
+        "6 Retouched Pictures",
+        "1-2 Outfit changes",
+        "50 Minutes outdoor location shoot",
+        "Natural light and reflector styling",
+        "High-resolution digital delivery",
+        "Private password-secured online gallery",
+        "Standard client usage rights"
+      ]
+    },
+    {
+      name: "Outdoor Standard",
+      price: 900,
+      priceLabel: "GH₵900",
+      duration: "50 Min Session",
+      popular: true,
+      subtitle: "Our benchmark outdoor collection with multi-backdrop scenic angles.",
+      features: [
+        "10 Retouched Pictures",
+        "1-3 Outfit changes",
+        "50 Minutes outdoor location shoot",
+        "Pro dynamic weather-grade guidance",
+        "Full color-graded proofs collection",
+        "Private password-secured online gallery",
+        "Commercial display license registry"
+      ]
+    },
+    {
+      name: "Outdoor Premium",
+      price: 1100,
+      priceLabel: "GH₵1,100",
+      duration: "50 Min Session",
+      popular: false,
+      subtitle: "Advanced level natural environment showcase designed with maximum detail.",
+      features: [
+        "12 Retouched Pictures",
+        "1-4 Outfit changes",
+        "50 Minutes outdoor location shoot",
+        "Bespoke location staging direction",
+        "Enhanced landscape backdrop styling",
+        "Private password-secured online gallery",
+        "Premium darkroom print sample included",
+        "Full extended commercial buyout rights"
+      ]
+    }
+  ],
+  wedding1: [
+    {
+      name: "One-Day Budget",
+      price: 2700,
+      priceLabel: "GH₵2,700",
+      duration: "One Day Coverage",
+      popular: false,
+      subtitle: "Streamlined single-day coverage focusing on the essential core ceremonies.",
+      features: [
+        "All Edited Event Pictures",
+        "Video Film (1 Mins)",
+        "Full Video",
+        "ONE Frame included",
+        "5 Exclusive couple Pictures",
+        "Premium Flash Drive folder"
+      ]
+    },
+    {
+      name: "One-Day Basic",
+      price: 3900,
+      priceLabel: "GH₵3,900",
+      duration: "Highlight & Photobook",
+      popular: true,
+      subtitle: "Comprehensive coverage with dedicated Audio Recorded Sound capture and a premium PhotoBook.",
+      features: [
+        "All Edited Event Pictures",
+        "Highlight Film (2 Mins)",
+        "Full Edited Video",
+        "Neatly Recorded Sound",
+        "Premium PhotoBook",
+        "12 Exclusive couple Pictures",
+        "Flash Drive packaging",
+        "Secure Cloud Storage"
+      ]
+    },
+    {
+      name: "One-Day Classic",
+      price: 4900,
+      priceLabel: "GH₵4,900",
+      duration: "Lifetime Legacy",
+      popular: false,
+      subtitle: "Our absolute signature premium cinematic visual legacy. Includes Pre-Wedding, Drone coverage, Love Story, and Two custom frames.",
+      features: [
+        "Pre-Wedding shoot session",
+        "All Edited Event Pictures",
+        "18 Exclusive couple Pictures",
+        "Cinematic Video Film (3-4 Mins)",
+        "Neatly Recorded Sound",
+        "Couple Love Story Film",
+        "Drone premium coverage",
+        "Bespoke PhotoBook",
+        "Two Custom Frames",
+        "Full Edited Video portfolio",
+        "Cloud Storage (Lifetime Access)"
+      ]
+    }
+  ],
+  wedding2: [
+    {
+      name: "Two-Day Budget",
+      price: 3500,
+      priceLabel: "GH₵3,500",
+      duration: "Two Days Coverage",
+      popular: false,
+      subtitle: "Cost-effective two-day legacy coverage documenting all core ceremonies.",
+      features: [
+        "All Edited Event Pictures",
+        "Trailer Film (2 Mins)",
+        "Full Video",
+        "8 Exclusive couple Pictures",
+        "Flash Drive folder",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Two-Day Basic",
+      price: 4900,
+      priceLabel: "GH₵4,900",
+      duration: "Advanced Duo coverage",
+      popular: true,
+      subtitle: "Fully structured dual-day visual production including high-end physical Photobooks and secure digital storage.",
+      features: [
+        "All Edited Event Pictures",
+        "Trailer Film (3 Mins)",
+        "Neatly Recorded Sound",
+        "Premium PhotoBook",
+        "12 Exclusive couple Pictures",
+        "Flash Drive packaging",
+        "Cloud Storage (Lifetime Access)",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Two-Day Classic",
+      price: 6900,
+      priceLabel: "GH₵6,900",
+      duration: "Ultimate Royal Legacy",
+      popular: false,
+      subtitle: "The non-compromise multi-day epic cinematic custom production. Complete drone coverage, couple love story interview, and multiple legacy frames.",
+      features: [
+        "Pre-Wedding shoot session",
+        "All Edited Event Pictures",
+        "20 Exclusive couple Pictures",
+        "Cinematic Video Film (3-4 Mins)",
+        "Neatly Recorded Sound",
+        "Couple Love Story Interview",
+        "Drone premium coverage",
+        "Bespoke PhotoBook",
+        "Two Custom Frames",
+        "Full Edited Video portfolio",
+        "Cloud Storage (Lifetime Access)",
+        "Terms and conditions applied"
+      ]
+    }
+  ],
+  kids_studio: [
+    {
+      name: "Kids-Studio Starter",
+      price: 600,
+      priceLabel: "GH₵600",
+      duration: "50 Min Session",
+      popular: false,
+      subtitle: "Bespoke studio experience crafted for beautiful portraits of your little ones.",
+      features: [
+        "7 Retouched Pictures",
+        "1-2 Outfit changes",
+        "Engaging child-friendly setup & backdrops",
+        "High-resolution digital delivery",
+        "Private password-secured online gallery",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Kids-Studio Gold",
+      price: 700,
+      priceLabel: "GH₵700",
+      duration: "50 Min Session",
+      popular: true,
+      subtitle: "Our signature, most loved child studio setup with custom playful props.",
+      features: [
+        "9 Retouched Pictures",
+        "1-3 Outfit changes",
+        "Engaging child-friendly setup & playful props",
+        "High-resolution digital delivery",
+        "Private password-secured online gallery",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Kids-Studio Luxury",
+      price: 900,
+      priceLabel: "GH₵900",
+      duration: "50 Min Session",
+      popular: false,
+      subtitle: "The complete elite luxury package with themed sets and full styling support.",
+      features: [
+        "12 Retouched Pictures",
+        "1-4 Outfit changes",
+        "Premium themed sets & playful props",
+        "Full stylist consultation & guidance on set",
+        "High-resolution digital delivery",
+        "Private password-secured online gallery",
+        "Terms and conditions applied"
+      ]
+    }
+  ],
+  kids_outdoor: [
+    {
+      name: "Kids-Outdoor Starter",
+      price: 900,
+      priceLabel: "GH₵900",
+      duration: "Outdoor or Home",
+      popular: false,
+      subtitle: "Capturing organic outdoor child play or cozy home sessions with style.",
+      features: [
+        "7 Retouched Pictures",
+        "1-2 Outfit changes",
+        "Natural light and reflector styling",
+        "Cozy backdrop setting & play actions",
+        "High-resolution digital delivery",
+        "Private password-secured online gallery",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Kids-Outdoor Gold",
+      price: 1000,
+      priceLabel: "GH₵1,000",
+      duration: "Outdoor or Home",
+      popular: true,
+      subtitle: "Scenic nature backdrops or beautifully staged multi-angle home designs.",
+      features: [
+        "9 Retouched Pictures",
+        "1-3 Outfit changes",
+        "Professional location staging setups",
+        "Dynamic high-speed focus capture",
+        "High-resolution digital delivery",
+        "Private password-secured online gallery",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Kids-Outdoor Luxury",
+      price: 1200,
+      priceLabel: "GH₵1,200",
+      duration: "Outdoor or Home",
+      popular: false,
+      subtitle: "Advanced custom themed child location production with custom props.",
+      features: [
+        "12 Retouched Pictures",
+        "1-4 Outfit changes",
+        "Premium customized theme setups",
+        "Bespoke location staging props provided",
+        "High-resolution digital delivery",
+        "Private password-secured online gallery",
+        "Terms and conditions applied"
+      ]
+    }
+  ],
+  funeral: [
+    {
+      name: "Funeral Basic",
+      price: 2500,
+      priceLabel: "GH₵2,500",
+      duration: "One Day Coverage",
+      popular: false,
+      subtitle: "Professional single-day coverage of funeral events, ceremonies, and family gatherings.",
+      features: [
+        "All Edited Event Pictures",
+        "Highlight Film (2 Mins)",
+        "Full Edited Video",
+        "Flash Drive",
+        "Extra crew Members option",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Funeral Diamond",
+      price: 3500,
+      priceLabel: "GH₵3,500",
+      duration: "One Day Coverage",
+      popular: true,
+      subtitle: "Enhanced sound-monitored single day coverage containing family premium photobooks and portrait pictures.",
+      features: [
+        "All Edited Event Pictures",
+        "Highlight Film (2 Mins)",
+        "Full Edited Video",
+        "Neatly Recorded Sound",
+        "Premium PhotoBook",
+        "12 Exclusive Portrait/Family Pictures",
+        "Flash Drive",
+        "Extra crew Members option",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Funeral Classic",
+      price: 4900,
+      priceLabel: "GH₵4,900",
+      duration: "One Day Coverage",
+      popular: false,
+      subtitle: "Complete non-compromise multi-angle cinematic production covering every sequence in detail.",
+      features: [
+        "All Edited Event Pictures",
+        "Cinematic Video Highlight (3-4 Mins)",
+        "Neatly Recorded Sound",
+        "Drone coverage",
+        "Premium PhotoBook",
+        "Two Custom Frames",
+        "Full Edited Video",
+        "Cloud Storage (Lifetime Access)",
+        "Extra crew Members option",
+        "Terms and conditions applied"
+      ]
+    }
+  ],
+  funeral_2d: [
+    {
+      name: "Funeral-2D Basic",
+      price: 3200,
+      priceLabel: "GH₵3,200",
+      duration: "Two Days Coverage",
+      popular: false,
+      subtitle: "Professional two-day coverage of funeral events, ceremonies, and family gatherings.",
+      features: [
+        "All Edited Event Pictures",
+        "Highlight Film (2 Mins)",
+        "Full Edited Video",
+        "Flash Drive",
+        "Extra crew Members option",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Funeral-2D Diamond",
+      price: 4900,
+      priceLabel: "GH₵4,900",
+      duration: "Two Days Coverage",
+      popular: true,
+      subtitle: "Enhanced sound-monitored two days coverage containing family premium photobooks and portrait pictures.",
+      features: [
+        "All Edited Event Pictures",
+        "Highlight Film (2 Mins)",
+        "Full Edited Video",
+        "Neatly Recorded Sound",
+        "Premium PhotoBook",
+        "12 Exclusive Portrait/Family Pictures",
+        "Flash Drive",
+        "Extra crew Members option",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Funeral-2D Classic",
+      price: 6900,
+      priceLabel: "GH₵6,900",
+      duration: "Two Days Coverage",
+      popular: false,
+      subtitle: "Complete non-compromise multi-angle cinematic production covering both days of sequence in detail.",
+      features: [
+        "All Edited Event Pictures",
+        "Cinematic Video Highlight (3-4 Mins)",
+        "Neatly Recorded Sound",
+        "Drone coverage",
+        "Premium PhotoBook",
+        "Two Custom Frames",
+        "Full Edited Video",
+        "Cloud Storage (Lifetime Access)",
+        "Extra crew Members option",
+        "Terms and conditions applied"
+      ]
+    }
+  ],
+  funeral_3d: [
+    {
+      name: "Funeral-3D Basic",
+      price: 4800,
+      priceLabel: "GH₵4,800",
+      duration: "Three Days Coverage",
+      popular: false,
+      subtitle: "Professional three-day coverage of funeral events, ceremonies, and family gatherings.",
+      features: [
+        "All Edited Event Pictures",
+        "Highlight Film (2 Mins)",
+        "Full Edited Video",
+        "Flash Drive",
+        "Extra crew Members option",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Funeral-3D Diamond",
+      price: 6900,
+      priceLabel: "GH₵6,900",
+      duration: "Three Days Coverage",
+      popular: true,
+      subtitle: "Enhanced sound-monitored three days coverage containing family premium photobooks and portrait pictures.",
+      features: [
+        "All Edited Event Pictures",
+        "Highlight Film (2 Mins)",
+        "Full Edited Video",
+        "Neatly Recorded Sound",
+        "Premium PhotoBook",
+        "12 Exclusive couple Pictures",
+        "Flash Drive",
+        "Extra crew Members option",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Funeral-3D Classic",
+      price: 8900,
+      priceLabel: "GH₵8,900",
+      duration: "Three Days Coverage",
+      popular: false,
+      subtitle: "Complete non-compromise multi-angle cinematic production covering all three days of events in detail.",
+      features: [
+        "All Edited Event Pictures",
+        "Cinematic Video Highlight (3-4 Mins)",
+        "Neatly Recorded Sound",
+        "Drone coverage",
+        "Premium PhotoBook",
+        "Full Edited Video",
+        "Cloud Storage (Lifetime Access)",
+        "Extra crew Members option",
+        "Terms and conditions applied"
+      ]
+    }
+  ],
+  corporate: [
+    {
+      name: "Corporate Photo Only",
+      price: 1000,
+      priceLabel: "GH₵1,000",
+      duration: "One Day Coverage",
+      popular: false,
+      subtitle: "Professional high-resolution photography coverage for single-day corporate meetings, brand activations, and conferences.",
+      features: [
+        "All Edited Corporate Pictures",
+        "High-Resolution Digital Delivery",
+        "Professional Editing & Color Grading",
+        "1 Senior Photographer Team",
+        "Full commercial usage rights",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Corporate Photo & Video Standard",
+      price: 2000,
+      priceLabel: "GH₵2,000",
+      duration: "One Day Coverage",
+      popular: true,
+      subtitle: "Our signature single-day business production package including professional high-fidelity sound, photography and video coverage.",
+      features: [
+        "All Edited Corporate Pictures",
+        "High-definition Video Highlight Film",
+        "Full Event Video Coverage",
+        "Recorded Sound / Clip Mic Capture",
+        "1 Senior Photographer",
+        "1 Senior Videographer",
+        "Full commercial usage rights",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Corporate Photo & Video Deluxe",
+      price: 2500,
+      priceLabel: "GH₵2,500",
+      duration: "One Day Coverage",
+      popular: false,
+      subtitle: "Ultra comprehensive business event production with multi-camera angles and expanded crew capacity for maximum coverage.",
+      features: [
+        "All Edited Corporate Pictures",
+        "Enhanced Video Highlight Film",
+        "Full Comprehensive Video Documentation",
+        "Multi-angle Audio Recording",
+        "1 Senior Photographer",
+        "2 Senior Videographers",
+        "Full commercial usage rights",
+        "Terms and conditions applied"
+      ]
+    }
+  ],
+  corporate_2d: [
+    {
+      name: "Corporate-2D Photo Only",
+      price: 1800,
+      priceLabel: "GH₵1,800",
+      duration: "Two Days Coverage",
+      popular: false,
+      subtitle: "Two-day professional photography covering entire corporate forums, summits, or promotional activations.",
+      features: [
+        "All Edited Corporate Pictures",
+        "High-Resolution Digital Delivery",
+        "Professional Editing & Color Grading",
+        "1 Senior Photographer Team",
+        "Full commercial usage rights",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Corporate-2D Photo & Video Standard",
+      price: 2900,
+      priceLabel: "GH₵2,900",
+      duration: "Two Days Coverage",
+      popular: true,
+      subtitle: "Complete multi-media coverage over both consecutive event days for balanced photo and video documentation.",
+      features: [
+        "All Edited Corporate Pictures",
+        "High-definition Video Highlight Film",
+        "Full Event Video Coverage",
+        "Recorded Sound / Clip Mic Capture",
+        "1 Senior Photographer",
+        "1 Senior Videographer",
+        "Full commercial usage rights",
+        "Terms and conditions applied"
+      ]
+    },
+    {
+      name: "Corporate-2D Photo & Video Deluxe",
+      price: 3900,
+      priceLabel: "GH₵3,900",
+      duration: "Two Days Coverage",
+      popular: false,
+      subtitle: "Borders corporate scale coverage over two full days with a high-capacity media team and flawless execution.",
+      features: [
+        "All Edited Corporate Pictures",
+        "Premium Video Highlight Film",
+        "Full Event Video Coverage & Raw Files Access",
+        "Multi-angle Audio Recording",
+        "1 Senior Photographer",
+        "2 Senior Videographers",
+        "Full commercial usage rights",
+        "Terms and conditions applied"
+      ]
+    }
+  ]
+};
 
 const currencies = [
-  { code: "USD", symbol: "$", rate: 1.0 },
-  { code: "GHS", symbol: "GH₵", rate: 14.50 },
-  { code: "NGN", symbol: "₦", rate: 1400.0 },
-  { code: "GBP", symbol: "£", rate: 0.79 }
+  { code: "GHS", symbol: "GH₵", rate: 1.0 },
+  { code: "USD", symbol: "$", rate: 1 / 14.50 },
+  { code: "NGN", symbol: "₦", rate: 105.0 },
+  { code: "GBP", symbol: "£", rate: 0.054 }
 ];
 
 export default function PricingPage() {
   const [selectedCurrency, setSelectedCurrency] = useState(currencies[0]);
   
+  // Category Tab state
+  const [activeCategory, setActiveCategory] = useState<"studio" | "outdoor" | "wedding1" | "wedding2" | "kids_studio" | "kids_outdoor" | "funeral" | "funeral_2d" | "funeral_3d" | "corporate" | "corporate_2d">("studio");
+  
   // Dynamic Calculator states
-  const [baseTier, setBaseTier] = useState(tiers[1]); // Default to popular
+  const [baseTier, setBaseTier] = useState(categories.studio[1]); // Default to popular
   const [extraHours, setExtraHours] = useState(0); // $200 / hr
   const [extraPrints, setExtraPrints] = useState(0); // $50 / print
   const [includeStylist, setIncludeStylist] = useState(false); // $450 flat
@@ -82,15 +639,15 @@ export default function PricingPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  // Compute total estimate
+  // Compute total estimate (in GHS base)
   const calcBasePrice = baseTier.price;
-  const calcHoursPrice = extraHours * 200;
-  const calcPrintsPrice = extraPrints * 50;
-  const calcStylistPrice = includeStylist ? 450 : 0;
-  const calcFramePrice = includeFrame ? 300 : 0;
+  const calcHoursPrice = extraHours * 150; // GH₵150 / hr
+  const calcPrintsPrice = extraPrints * 30; // GH₵30 / print
+  const calcStylistPrice = includeStylist ? 200 : 0; // GH₵200 flat
+  const calcFramePrice = includeFrame ? 150 : 0; // GH₵150 flat
 
-  const totalUSD = calcBasePrice + calcHoursPrice + calcPrintsPrice + calcStylistPrice + calcFramePrice;
-  const convertedTotal = (totalUSD * selectedCurrency.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const totalGHS = calcBasePrice + calcHoursPrice + calcPrintsPrice + calcStylistPrice + calcFramePrice;
+  const convertedTotal = (totalGHS * selectedCurrency.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
   return (
     <div className="min-h-screen bg-luxury-black text-white pt-28 pb-20 relative overflow-hidden">
@@ -131,8 +688,156 @@ export default function PricingPage() {
           </motion.p>
         </div>
 
-        {/* Currency Switch Selector */}
-        <div className="flex justify-center mb-10">
+        {/* Category & Currency filter controls */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+          {/* Studio vs Outdoor Category Switcher */}
+          <div className="flex flex-wrap justify-center items-center gap-1.5 p-1 bg-black/60 border border-white/5 rounded-2xl font-mono text-[10px] uppercase font-bold tracking-wider">
+            <button
+              onClick={() => {
+                setActiveCategory("studio");
+                setBaseTier(categories.studio[1]);
+              }}
+              className={`px-5 py-2 rounded-xl cursor-pointer transition-all ${
+                activeCategory === "studio"
+                  ? "bg-[#d4af37] text-black font-extrabold shadow-lg"
+                  : "text-white/60 hover:text-white"
+              }`}
+            >
+              Studio Sessions
+            </button>
+            <button
+              onClick={() => {
+                setActiveCategory("outdoor");
+                setBaseTier(categories.outdoor[1]);
+              }}
+              className={`px-5 py-2 rounded-xl cursor-pointer transition-all ${
+                activeCategory === "outdoor"
+                  ? "bg-[#d4af37] text-black font-extrabold shadow-lg"
+                  : "text-white/60 hover:text-white"
+              }`}
+            >
+              Outdoor Sessions
+            </button>
+            <button
+              onClick={() => {
+                setActiveCategory("wedding1");
+                setBaseTier(categories.wedding1[1]);
+              }}
+              className={`px-5 py-2 rounded-xl cursor-pointer transition-all ${
+                activeCategory === "wedding1"
+                  ? "bg-[#d4af37] text-black font-extrabold shadow-lg"
+                  : "text-white/60 hover:text-white"
+              }`}
+            >
+              Wedding (1-Day)
+            </button>
+            <button
+              onClick={() => {
+                setActiveCategory("wedding2");
+                setBaseTier(categories.wedding2[1]);
+              }}
+              className={`px-5 py-2 rounded-xl cursor-pointer transition-all ${
+                activeCategory === "wedding2"
+                  ? "bg-[#d4af37] text-black font-extrabold shadow-lg"
+                  : "text-white/60 hover:text-white"
+              }`}
+            >
+              Wedding (2-Day)
+            </button>
+            <button
+              onClick={() => {
+                setActiveCategory("kids_studio");
+                setBaseTier(categories.kids_studio[1]);
+              }}
+              className={`px-5 py-2 rounded-xl cursor-pointer transition-all ${
+                activeCategory === "kids_studio"
+                  ? "bg-[#d4af37] text-black font-extrabold shadow-lg"
+                  : "text-white/60 hover:text-white"
+              }`}
+            >
+              Kids Studio
+            </button>
+            <button
+              onClick={() => {
+                setActiveCategory("kids_outdoor");
+                setBaseTier(categories.kids_outdoor[1]);
+              }}
+              className={`px-5 py-2 rounded-xl cursor-pointer transition-all ${
+                activeCategory === "kids_outdoor"
+                  ? "bg-[#d4af37] text-black font-extrabold shadow-lg"
+                  : "text-white/60 hover:text-white"
+              }`}
+            >
+              Kids Outdoor
+            </button>
+            <button
+              onClick={() => {
+                setActiveCategory("funeral");
+                setBaseTier(categories.funeral[1]);
+              }}
+              className={`px-5 py-2 rounded-xl cursor-pointer transition-all ${
+                activeCategory === "funeral"
+                  ? "bg-[#d4af37] text-black font-extrabold shadow-lg"
+                  : "text-white/60 hover:text-white"
+              }`}
+            >
+              Funeral (1-Day)
+            </button>
+            <button
+              onClick={() => {
+                setActiveCategory("funeral_2d");
+                setBaseTier(categories.funeral_2d[1]);
+              }}
+              className={`px-5 py-2 rounded-xl cursor-pointer transition-all ${
+                activeCategory === "funeral_2d"
+                  ? "bg-[#d4af37] text-black font-extrabold shadow-lg"
+                  : "text-white/60 hover:text-white"
+              }`}
+            >
+              Funeral (2-Day)
+            </button>
+            <button
+              onClick={() => {
+                setActiveCategory("funeral_3d");
+                setBaseTier(categories.funeral_3d[1]);
+              }}
+              className={`px-5 py-2 rounded-xl cursor-pointer transition-all ${
+                activeCategory === "funeral_3d"
+                  ? "bg-[#d4af37] text-black font-extrabold shadow-lg"
+                  : "text-white/60 hover:text-white"
+              }`}
+            >
+              Funeral (3-Day)
+            </button>
+            <button
+              onClick={() => {
+                setActiveCategory("corporate");
+                setBaseTier(categories.corporate[1]);
+              }}
+              className={`px-5 py-2 rounded-xl cursor-pointer transition-all ${
+                activeCategory === "corporate"
+                  ? "bg-[#d4af37] text-black font-extrabold shadow-lg"
+                  : "text-white/60 hover:text-white"
+              }`}
+            >
+              Corporate (1-Day)
+            </button>
+            <button
+              onClick={() => {
+                setActiveCategory("corporate_2d");
+                setBaseTier(categories.corporate_2d[1]);
+              }}
+              className={`px-5 py-2 rounded-xl cursor-pointer transition-all ${
+                activeCategory === "corporate_2d"
+                  ? "bg-[#d4af37] text-black font-extrabold shadow-lg"
+                  : "text-white/60 hover:text-white"
+              }`}
+            >
+              Corporate (2-Day)
+            </button>
+          </div>
+
+          {/* Currency Switch Selector */}
           <div className="flex items-center gap-1.5 p-1 bg-black/60 border border-white/5 rounded-full font-mono text-[9px] font-bold uppercase tracking-widest text-white/50">
             {currencies.map(curr => (
               <button
@@ -151,8 +856,8 @@ export default function PricingPage() {
         </div>
 
         {/* Three Pillars Pricing comparison cards */}
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
-          {tiers.map((tier) => {
+        <div key={activeCategory} className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
+          {categories[activeCategory].map((tier) => {
             const convertedPrice = (tier.price * selectedCurrency.rate).toLocaleString(undefined, { maximumFractionDigits: 0 });
             return (
               <motion.div
@@ -245,22 +950,227 @@ export default function PricingPage() {
               <div className="space-y-6 bg-white/[0.01] p-6 rounded-2xl border border-white/5 font-mono">
                 
                 {/* Select Base Tier */}
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <label className="text-[#d4af37] text-[9px] uppercase tracking-wider block font-bold">1. Base Service Foundation</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {tiers.map(t => (
-                      <button
-                        key={t.name}
-                        onClick={() => setBaseTier(t)}
-                        className={`p-2.5 rounded-lg border text-[9px] text-center font-bold tracking-tight cursor-pointer transition-all ${
-                          baseTier.name === t.name
-                            ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37]"
-                            : "bg-black/40 border-white/5 text-white/50 hover:text-white"
-                        }`}
-                      >
-                        {t.name.split(" ")[0]}
-                      </button>
-                    ))}
+                  
+                  <div className="space-y-2">
+                    <span className="text-[8px] uppercase tracking-widest text-white/30 block">Studio Foundations</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {categories.studio.map(t => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onClick={() => setBaseTier(t)}
+                          className={`p-2 rounded-lg border text-[9px] text-center font-bold tracking-tight cursor-pointer transition-all ${
+                            baseTier.name === t.name
+                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37]"
+                              : "bg-black/40 border-white/5 text-white/50 hover:text-white"
+                          }`}
+                        >
+                          {t.name.split(" ")[1]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[8px] uppercase tracking-widest text-white/30 block">Outdoor Foundations</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {categories.outdoor.map(t => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onClick={() => setBaseTier(t)}
+                          className={`p-2 rounded-lg border text-[9px] text-center font-bold tracking-tight cursor-pointer transition-all ${
+                            baseTier.name === t.name
+                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37]"
+                              : "bg-black/40 border-white/5 text-white/50 hover:text-white"
+                          }`}
+                        >
+                          {t.name.split(" ")[1]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[8px] uppercase tracking-widest text-white/30 block">Wedding 1-Day Foundations</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {categories.wedding1.map(t => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onClick={() => setBaseTier(t)}
+                          className={`p-2 rounded-lg border text-[9px] text-center font-bold tracking-tight cursor-pointer transition-all ${
+                            baseTier.name === t.name
+                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37]"
+                              : "bg-black/40 border-white/5 text-white/50 hover:text-white"
+                          }`}
+                        >
+                          {t.name.split(" ")[1]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[8px] uppercase tracking-widest text-white/30 block">Wedding 2-Day Foundations</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {categories.wedding2.map(t => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onClick={() => setBaseTier(t)}
+                          className={`p-2 rounded-lg border text-[9px] text-center font-bold tracking-tight cursor-pointer transition-all ${
+                            baseTier.name === t.name
+                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37]"
+                              : "bg-black/40 border-white/5 text-white/50 hover:text-white"
+                          }`}
+                        >
+                          {t.name.split(" ")[1]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[8px] uppercase tracking-widest text-white/30 block">Kids Studio Foundations</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {categories.kids_studio.map(t => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onClick={() => setBaseTier(t)}
+                          className={`p-2 rounded-lg border text-[9px] text-center font-bold tracking-tight cursor-pointer transition-all ${
+                            baseTier.name === t.name
+                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37]"
+                              : "bg-black/40 border-white/5 text-white/50 hover:text-white"
+                          }`}
+                        >
+                          {t.name.split(" ")[1]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[8px] uppercase tracking-widest text-white/30 block">Kids Outdoor Foundations</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {categories.kids_outdoor.map(t => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onClick={() => setBaseTier(t)}
+                          className={`p-2 rounded-lg border text-[9px] text-center font-bold tracking-tight cursor-pointer transition-all ${
+                            baseTier.name === t.name
+                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37]"
+                              : "bg-black/40 border-white/5 text-white/50 hover:text-white"
+                          }`}
+                        >
+                          {t.name.split(" ")[1]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[8px] uppercase tracking-widest text-white/30 block">Funeral 1-Day Foundations</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {categories.funeral.map(t => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onClick={() => setBaseTier(t)}
+                          className={`p-2 rounded-lg border text-[9px] text-center font-bold tracking-tight cursor-pointer transition-all ${
+                            baseTier.name === t.name
+                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37]"
+                              : "bg-black/40 border-white/5 text-white/50 hover:text-white"
+                          }`}
+                        >
+                          {t.name.split(" ")[1]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[8px] uppercase tracking-widest text-white/30 block">Funeral 2-Day Foundations</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {categories.funeral_2d.map(t => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onClick={() => setBaseTier(t)}
+                          className={`p-2 rounded-lg border text-[9px] text-center font-bold tracking-tight cursor-pointer transition-all ${
+                            baseTier.name === t.name
+                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37]"
+                              : "bg-black/40 border-white/5 text-white/50 hover:text-white"
+                          }`}
+                        >
+                          {t.name.split(" ")[1]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[8px] uppercase tracking-widest text-white/30 block">Funeral 3-Day Foundations</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {categories.funeral_3d.map(t => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onClick={() => setBaseTier(t)}
+                          className={`p-2 rounded-lg border text-[9px] text-center font-bold tracking-tight cursor-pointer transition-all ${
+                            baseTier.name === t.name
+                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37]"
+                              : "bg-black/40 border-white/5 text-white/50 hover:text-white"
+                          }`}
+                        >
+                          {t.name.split(" ")[1]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[8px] uppercase tracking-widest text-white/30 block">Corporate 1-Day Foundations</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {categories.corporate.map(t => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onClick={() => setBaseTier(t)}
+                          className={`p-2 rounded-lg border text-[9px] text-center font-bold tracking-tight cursor-pointer transition-all ${
+                            baseTier.name === t.name
+                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37]"
+                              : "bg-black/40 border-white/5 text-white/50 hover:text-white"
+                          }`}
+                        >
+                          {t.name.replace("Corporate-2D ", "").replace("Corporate ", "")}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[8px] uppercase tracking-widest text-white/30 block">Corporate 2-Day Foundations</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {categories.corporate_2d.map(t => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onClick={() => setBaseTier(t)}
+                          className={`p-2 rounded-lg border text-[9px] text-center font-bold tracking-tight cursor-pointer transition-all ${
+                            baseTier.name === t.name
+                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37]"
+                              : "bg-black/40 border-white/5 text-white/50 hover:text-white"
+                          }`}
+                        >
+                          {t.name.replace("Corporate-2D ", "").replace("Corporate ", "")}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -268,7 +1178,7 @@ export default function PricingPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-[9px] font-bold">
                     <label className="text-[#d4af37] uppercase tracking-wider block">2. Extra Studio Shoot Hours</label>
-                    <span className="text-white/45">(+$200 / hr)</span>
+                    <span className="text-white/45">(+{selectedCurrency.symbol}{(150 * selectedCurrency.rate).toFixed(0)} / hr)</span>
                   </div>
                   <div className="flex items-center gap-4 bg-black/60 p-1.5 border border-white/5 rounded-xl">
                     <button 
@@ -291,7 +1201,7 @@ export default function PricingPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-[9px] font-bold">
                     <label className="text-[#d4af37] uppercase tracking-wider block">3. Extra Fine Art Prints</label>
-                    <span className="text-white/45">(+$50 / print)</span>
+                    <span className="text-white/45">(+{selectedCurrency.symbol}{(30 * selectedCurrency.rate).toFixed(0)} / print)</span>
                   </div>
                   <div className="flex items-center gap-4 bg-black/60 p-1.5 border border-white/5 rounded-xl">
                     <button 
@@ -326,7 +1236,7 @@ export default function PricingPage() {
                     />
                     <div className="flex-1">
                       <span className="text-white group-hover:text-white transition-colors block">Add Styling & Makeup Team</span>
-                      <span className="text-white/30 text-[9px] block">+$450 flat professional salon services on site.</span>
+                      <span className="text-white/30 text-[9px] block">+{selectedCurrency.symbol}{(200 * selectedCurrency.rate).toLocaleString(undefined, { maximumFractionDigits: 0 })} flat professional salon services on site.</span>
                     </div>
                   </label>
 
@@ -340,7 +1250,7 @@ export default function PricingPage() {
                     />
                     <div className="flex-1">
                       <span className="text-white group-hover:text-white transition-colors block">Premium Exhibition Custom Framing</span>
-                      <span className="text-white/30 text-[9px] block">+$300 museum anti-acid framing overlay.</span>
+                      <span className="text-white/30 text-[9px] block">+{selectedCurrency.symbol}{(150 * selectedCurrency.rate).toLocaleString(undefined, { maximumFractionDigits: 0 })} museum anti-acid framing overlay.</span>
                     </div>
                   </label>
                 </div>
@@ -355,30 +1265,30 @@ export default function PricingPage() {
                   <div className="space-y-2 border-b border-white/5 pb-4 text-[11px] text-white/60 text-left">
                     <div className="flex justify-between">
                       <span>Base Retainer:</span>
-                      <span className="text-white font-bold">${baseTier.price.toLocaleString()}</span>
+                      <span className="text-white font-bold">{selectedCurrency.symbol}{(baseTier.price * selectedCurrency.rate).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                     </div>
                     {extraHours > 0 && (
                       <div className="flex justify-between">
                         <span>Extra Time ({extraHours} hrs):</span>
-                        <span className="text-white font-bold">+${calcHoursPrice.toLocaleString()}</span>
+                        <span className="text-white font-bold">+{selectedCurrency.symbol}{(calcHoursPrice * selectedCurrency.rate).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                       </div>
                     )}
                     {extraPrints > 0 && (
                       <div className="flex justify-between">
                         <span>Extra Prints ({extraPrints}):</span>
-                        <span className="text-white font-bold">+${calcPrintsPrice.toLocaleString()}</span>
+                        <span className="text-white font-bold">+{selectedCurrency.symbol}{(calcPrintsPrice * selectedCurrency.rate).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                       </div>
                     )}
                     {includeStylist && (
                       <div className="flex justify-between">
                         <span>On-site Salon Stylists:</span>
-                        <span className="text-white font-bold">+$450</span>
+                        <span className="text-white font-bold">+{selectedCurrency.symbol}{(calcStylistPrice * selectedCurrency.rate).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                       </div>
                     )}
                     {includeFrame && (
                       <div className="flex justify-between">
                         <span>Acid-free Custom Frame:</span>
-                        <span className="text-white font-bold">+$300</span>
+                        <span className="text-white font-bold">+{selectedCurrency.symbol}{(calcFramePrice * selectedCurrency.rate).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                       </div>
                     )}
                   </div>

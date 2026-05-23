@@ -27,7 +27,7 @@ export default function Register() {
 
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: "client" }
+    defaultValues: { role: "admin" }
   });
 
   const onSubmit = async (data: RegisterForm) => {
@@ -41,7 +41,7 @@ export default function Register() {
         await setDoc(doc(db, "users", user.uid), {
           fullName: data.fullName,
           email: data.email,
-          role: data.role,
+          role: "admin", // strictly force admin role
           createdAt: serverTimestamp(),
         });
       } catch (dbErr: any) {
@@ -68,8 +68,11 @@ export default function Register() {
             <Camera className="w-8 h-8 text-luxury-gold" />
             <span className="text-2xl font-serif tracking-tighter text-luxury-gold">JAY PICTURES</span>
           </Link>
-          <h2 className="text-3xl font-display text-white">Join the Archive</h2>
-          <p className="text-white/40 mt-2">Begin your photographic journey</p>
+          <h2 className="text-3xl font-display text-white">Admin Portal</h2>
+          <p className="text-white/40 mt-2 text-xs">Create your secure site administrator account</p>
+          <div className="mt-4 p-3 bg-white/[0.02] border border-white/5 rounded-xl text-[10px] text-white/50 leading-relaxed text-center">
+            * Public visitor accounts are disabled. Guests can view the gallery and book sessions directly without creating credentials.
+          </div>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -120,19 +123,8 @@ export default function Register() {
             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
           </div>
 
-          <div>
-            <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">Account Type</label>
-            <select
-              {...register("role")}
-              className="w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-luxury-gold transition-colors appearance-none"
-            >
-              <option value="client" className="bg-luxury-black">Client</option>
-              <option value="admin" className="bg-luxury-black">Admin</option>
-            </select>
-          </div>
-
           <Button type="submit" disabled={isLoading} className="w-full py-4 text-xs font-bold uppercase tracking-widest mt-4">
-            {isLoading ? "Creating account..." : "Join Archive"}
+            {isLoading ? "Creating administrator account..." : "Register Administrator"}
           </Button>
         </form>
 
