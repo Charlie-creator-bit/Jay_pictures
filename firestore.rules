@@ -115,6 +115,15 @@ service cloud.firestore {
              data.type is string && data.type.size() > 0 && data.type.size() <= 100;
     }
 
+    function isValidInspiration(data) {
+      return data.keys().hasAll(['clientId', 'imageUrl', 'title', 'conceptNotes', 'createdAt']) &&
+             data.keys().size() == 5 &&
+             data.clientId is string && isValidId(data.clientId) &&
+             data.imageUrl is string && data.imageUrl.size() > 0 && data.imageUrl.size() <= 1000 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.conceptNotes is string && data.conceptNotes.size() > 0 && data.conceptNotes.size() <= 2000;
+    }
+
     // --- Match Rules ---
 
     // USERS COLLECTION
@@ -291,6 +300,28 @@ service cloud.firestore {
       );
       
       allow delete: if isSignedIn() && isValidId(notificationId) && (resource.data.recipientId == request.auth.uid || isAdmin());
+    }
+
+    // INSPIRATIONS COLLECTION
+    match /inspirations/{inspirationId} {
+      allow get: if isSignedIn() && isValidId(inspirationId) && (resource.data.clientId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.clientId == request.auth.uid || isAdmin());
+      
+      allow create: if isSignedIn() && isValidId(inspirationId) && isValidInspiration(incoming()) && (
+        isAdmin() ||
+        (incoming().clientId == request.auth.uid && incoming().createdAt == request.time)
+      );
+      
+      allow update: if isSignedIn() && isValidId(inspirationId) && isValidInspiration(incoming()) && (
+        isAdmin() ||
+        (resource.data.clientId == request.auth.uid &&
+         incoming().clientId == existing().clientId &&
+         incoming().createdAt == existing().createdAt &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['imageUrl', 'title', 'conceptNotes'])
+        )
+      );
+      
+      allow delete: if isSignedIn() && isValidId(inspirationId) && (resource.data.clientId == request.auth.uid || isAdmin());
     }
 
   }

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { handleFirestoreError, OperationType } from "../lib/firestore-error";
 
@@ -36,6 +36,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         if (userDoc && userDoc.exists()) {
           setRole(userDoc.data().role as "admin" | "client");
+        } else if (!currentUser.isAnonymous) {
+          // If they signed in (e.g., via Google, external, or manual register) but no user doc exists in Firestore,
+          // dynamically provision their site admin document as only system administrators maintain registered sessions.
+          try {
+            await setDoc(doc(db, "users", currentUser.uid), {
+              fullName: currentUser.displayName || currentUser.email?.split("@")[0] || "Administrator",
+              email: currentUser.email || "",
+              role: "admin",
+              createdAt: serverTimestamp(),
+            });
+            setRole("admin");
+          } catch (createErr) {
+            console.error("Failed to auto-provision user record:", createErr);
+            setRole("client");
+          }
         } else {
           // Fallback to client role for anonymous sessions
           setRole("client");

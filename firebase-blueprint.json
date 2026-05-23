@@ -272,6 +272,35 @@
         }
       },
       "required": ["recipientId", "title", "message", "isRead", "type", "createdAt"]
+    },
+    "Inspiration": {
+      "title": "Inspiration",
+      "description": "Client creative inspirations moodboard pins",
+      "type": "object",
+      "properties": {
+        "clientId": {
+          "type": "string",
+          "description": "Unique identifier of the matching client user document"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Direct URL representing the concept picture"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title text describing the inspiration setup"
+        },
+        "conceptNotes": {
+          "type": "string",
+          "description": "Creative details, guidelines or notes for the session styling"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp indicating when the pin was added to the moodboard"
+        }
+      },
+      "required": ["clientId", "imageUrl", "title", "conceptNotes", "createdAt"]
     }
   },
   "firestore": {
@@ -322,6 +351,12 @@
         "$ref": "#/entities/Notification"
       },
       "description": "Platform alerts pushed to unique client accounts or global admin team"
+    },
+    "inspirations": {
+      "schema": {
+        "$ref": "#/entities/Inspiration"
+      },
+      "description": "Moodboard pins and creative inspirations set up by clients to guide their scheduled photographic sessions"
     }
   }
 }
