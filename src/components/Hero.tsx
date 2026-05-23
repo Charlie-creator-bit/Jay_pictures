@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import Button from "./ui/Button.tsx";
 import { Link } from "react-router-dom";
+import heroImg from "../assets/images/jay_pictures_hero_1779202037948.png";
 
 export default function Hero() {
   return (
@@ -11,7 +12,7 @@ export default function Hero() {
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ duration: 20, repeat: Infinity, repeatType: "reverse" }}
-          src="/src/assets/images/jay_pictures_hero_1779202037948.png"
+          src={heroImg}
           alt="Luxury Studio"
           className="w-full h-full object-cover"
           referrerPolicy="no-referrer"
