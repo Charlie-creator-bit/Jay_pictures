@@ -570,13 +570,10 @@ export default function Book() {
               ) : services.length === 0 ? (
                 <div className="p-8 text-center border border-white/5 bg-white/[0.02] rounded-xl">
                   <Info className="w-8 h-8 text-luxury-gold mx-auto mb-4" />
-                  <h4 className="text-lg font-serif mb-2">No Databases Packages Available</h4>
-                  <p className="text-white/40 text-xs max-w-md mx-auto mb-6">
-                    In compliance with Firestore design boundaries, services must exist in the database collections prior to booking.
+                  <h4 className="text-lg font-serif mb-2">No Packages Available</h4>
+                  <p className="text-white/40 text-xs max-w-md mx-auto">
+                    We are currently preparing our packages index. Please check back in a moment or contact Jay Pictures support.
                   </p>
-                  <Button variant="outline" onClick={() => navigate("/login")}>
-                    Log In as Admin to preseed them
-                  </Button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -707,21 +704,14 @@ export default function Book() {
                       Fetching database timeslots...
                     </div>
                   ) : slotsForDate.length === 0 ? (
-                    <div className="p-6 border border-[#d4af37]/10 bg-[#d4af37]/5 rounded-xl space-y-3">
+                    <div className="p-6 border border-white/5 bg-white/[0.02] rounded-xl space-y-2">
                       <HelpCircle className="w-6 h-6 text-luxury-gold" />
                       <p className="text-xs text-white/70 leading-relaxed">
                         No availability entries registered for this date.
                       </p>
                       <p className="text-[10px] text-white/40 leading-relaxed">
-                        In compliance with security regulations, custom sessions must be booked inside slots initialized by the administrator.
+                        Please try choosing another date or contact our team to select a custom slot.
                       </p>
-                      
-                      <button 
-                        onClick={() => navigate("/admin")}
-                        className="py-2 px-4 bg-white/5 hover:bg-white/10 rounded-lg text-[9px] uppercase tracking-widest font-bold border border-white/10 transition-colors w-full"
-                      >
-                        Visit Studio admin to open dates
-                      </button>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-2.5 max-h-[280px] overflow-y-auto pr-1">
