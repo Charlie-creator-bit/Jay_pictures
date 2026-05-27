@@ -96,7 +96,14 @@ export default function Book() {
 
   // User selections
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(""); // Format: YYYY-MM-DD
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, "0");
+    const day = String(tomorrow.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }); // Format: YYYY-MM-DD
   const [selectedTime, setSelectedTime] = useState<string>(""); // Format: HH:MM
   const [slotsForDate, setSlotsForDate] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -218,28 +225,10 @@ export default function Book() {
   useEffect(() => {
     const fetchServices = async () => {
       setLoadingServices(true);
-      let defaultServices: Service[] = [];
-      try {
-        const querySnapshot = await getDocs(collection(db, "services"));
-        let serviceList: Service[] = [];
-        querySnapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          if (data.isActive !== false) {
-            serviceList.push({
-              id: docSnap.id,
-              title: data.title,
-              description: data.description,
-              price: data.price,
-              durationMinutes: data.durationMinutes,
-              isActive: data.isActive,
-            });
-          }
-        });
-
-        defaultServices = [
-          // Studio Sessions
-          {
-            id: "studio-starter",
+      const defaultServices: Service[] = [
+        // Studio Sessions
+        {
+          id: "studio-starter",
             title: "Studio Starter",
             price: 40,
             durationMinutes: 50,
@@ -514,6 +503,26 @@ export default function Book() {
           }
         ];
 
+        let serviceList: Service[] = [];
+        try {
+          const querySnapshot = await getDocs(collection(db, "services"));
+          querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            if (data.isActive !== false) {
+              serviceList.push({
+                id: docSnap.id,
+                title: data.title,
+                description: data.description,
+                price: data.price,
+                durationMinutes: data.durationMinutes,
+                isActive: data.isActive,
+              });
+            }
+          });
+        } catch (err) {
+          console.error("Error fetching services from Firestore:", err);
+        }
+
         // Robust delta seeding check to repair prices and write missing ones
         const existingIds = new Set(serviceList.map(s => s.id));
         const missingOrMismatched = defaultServices.filter(svc => {
@@ -561,26 +570,7 @@ export default function Book() {
             setActiveCategory(categoryMatched);
           }
         }
-      } catch (err) {
-        console.error("Error fetching services:", err);
-        // Fallback on total failure
-        try {
-          // defaultServices can be used as fallback directly if it is in scope
-          setServices(defaultServices);
-          if (preSelectedServiceId) {
-            const matched = defaultServices.find(s => s.id === preSelectedServiceId || s.title.toLowerCase().includes(preSelectedServiceId.toLowerCase()));
-            if (matched) {
-              setSelectedService(matched);
-              const categoryMatched = getServiceCategory(matched.id, matched.title);
-              setActiveCategory(categoryMatched);
-            }
-          }
-        } catch (_fallbackErr) {
-          console.error("Failed to apply fallback services:", _fallbackErr);
-        }
-      } finally {
         setLoadingServices(false);
-      }
     };
     fetchServices();
   }, [preSelectedServiceId, user]);
@@ -631,8 +621,16 @@ export default function Book() {
         slots.sort((a, b) => a.time.localeCompare(b.time));
         setSlotsForDate(slots);
       } catch (err: any) {
-        console.error("Error querying slots:", err);
-        setError("Could not retrieve timeslots for selected date.");
+        console.warn("Unable to fetch remote slots, auto-generating default timeslots locally:", err);
+        // Robust fallback to let the booking complete safely even offline or under Firestore glitches
+        const defaultTimes = ["09:00", "11:00", "13:00", "15:00", "17:00", "19:00"];
+        const fallbackSlots: TimeSlot[] = defaultTimes.map((time) => ({
+          id: `${selectedDate}_${time.replace(":", "")}`,
+          date: selectedDate,
+          time,
+          isBooked: false,
+        }));
+        setSlotsForDate(fallbackSlots);
       } finally {
         setLoadingSlots(false);
       }
@@ -653,7 +651,15 @@ export default function Book() {
 
   const handleMonthChange = (direction: "prev" | "next") => {
     const newMonth = new Date(currentMonth);
+    const today = new Date();
     if (direction === "prev") {
+      // Avoid navigating to any month earlier than the current month
+      if (
+        newMonth.getFullYear() < today.getFullYear() ||
+        (newMonth.getFullYear() === today.getFullYear() && newMonth.getMonth() <= today.getMonth())
+      ) {
+        return;
+      }
       newMonth.setMonth(newMonth.getMonth() - 1);
     } else {
       newMonth.setMonth(newMonth.getMonth() + 1);
@@ -692,6 +698,19 @@ export default function Book() {
       setError("Please complete all booking selections prior to submission.");
       return;
     }
+
+    // Validate date-time format and ensure booking is in the future
+    const pickedDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
+    if (isNaN(pickedDateTime.getTime())) {
+      setError("The selected date or time format is invalid.");
+      return;
+    }
+    const rightNow = new Date();
+    if (pickedDateTime < rightNow) {
+      setError("Your selected booking time slot has already passed. Please select a future date and time.");
+      return;
+    }
+
     if (!fullName.trim() || !phone.trim() || !email.trim()) {
       setError("Please fill out your contact details (including full name, phone number, and email).");
       return;
@@ -1063,17 +1082,30 @@ export default function Book() {
                         const dateStr = `${year}-${month}-${String(day).padStart(2, "0")}`;
                         const isSelected = selectedDate === dateStr;
                         
+                        const dateObj = new Date(`${dateStr}T23:59:59`);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const isPast = dateObj < today;
+                        
                         return (
                           <button
                             key={idx}
+                            disabled={isPast}
                             onClick={() => handleDateSelect(day)}
-                            className={`aspect-square sm:p-2 rounded-lg text-xs font-semibold flex items-center justify-center transition-all ${
-                              isSelected 
-                                ? "bg-luxury-gold text-black font-bold border border-luxury-gold" 
-                                : "hover:bg-white/5 text-white/80 border border-transparent"
+                            className={`relative aspect-square sm:p-2 rounded-lg text-xs font-semibold flex flex-col items-center justify-center transition-all ${
+                              isPast
+                                ? "text-white/15 cursor-not-allowed opacity-40 bg-transparent"
+                                : isSelected 
+                                  ? "bg-luxury-gold text-black font-bold border border-luxury-gold shadow-md shadow-luxury-gold/10" 
+                                  : "hover:bg-white/5 text-white/80 border border-transparent cursor-pointer"
                             }`}
                           >
-                            {day}
+                            <span>{day}</span>
+                            {!isPast && (
+                              <span className={`w-1 h-1 rounded-full mt-0.5 transition-colors duration-200 ${
+                                isSelected ? "bg-black" : "bg-luxury-gold"
+                              }`} />
+                            )}
                           </button>
                         );
                       })}

@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           userDoc = await getDoc(doc(db, "users", currentUser.uid));
         } catch (error) {
-          handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
+          console.warn("Error fetching users document in AuthContext:", error);
         }
         const ADMIN_EMAILS = [
           "charlesadu3112@gmail.com",

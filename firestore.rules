@@ -44,9 +44,10 @@ service cloud.firestore {
 
     function isValidUser(data) {
       return data.keys().hasAll(['fullName', 'email', 'role', 'createdAt']) &&
-             data.keys().size() == 4 &&
+             (data.keys().size() == 4 || (data.keys().size() == 5 && data.keys().hasAll(['phone']))) &&
              data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 200 &&
              data.email is string && data.email.size() > 0 && data.email.size() <= 200 &&
+             (!data.keys().hasAll(['phone']) || (data.phone is string && data.phone.size() <= 50)) &&
              (data.role == 'admin' || data.role == 'client') &&
              data.createdAt == request.time;
     }
@@ -147,7 +148,7 @@ service cloud.firestore {
         (isOwner(userId) && isValidUser(incoming()) &&
          incoming().role == existing().role &&
          incoming().createdAt == existing().createdAt && (
-           incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'email'])
+           incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'email', 'phone'])
          )
         )
       );

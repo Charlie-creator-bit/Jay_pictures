@@ -97,6 +97,75 @@ const INSPIRATION_PRESETS = [
   { title: "Venice Waterscape Reflections", imageUrl: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=800", note: "Vibrant motion blur portraiture captured alongside water canals." }
 ];
 
+// Countdown timer for next photoshoot in Client Dashboard
+const CountdownTimer = ({ targetDate }: { targetDate: string }) => {
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    isPast: boolean;
+  }>({ days: 0, hours: 0, minutes: 0, seconds: 0, isPast: false });
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = new Date(targetDate).getTime() - Date.now();
+      if (difference <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true });
+        return;
+      }
+
+      setTimeLeft({
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60),
+        isPast: false,
+      });
+    };
+
+    calculateTimeLeft();
+    const interval = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  if (timeLeft.isPast) {
+    return (
+      <div className="flex items-center gap-1.5 text-[10px] text-luxury-gold font-mono uppercase tracking-wider bg-[#d4af37]/5 border border-[#d4af37]/20 px-3 py-1 bg-black/40 rounded-lg">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-pulse" />
+        Photoshoot session has started or passed
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1 sm:gap-1.5">
+      <span className="text-[9px] uppercase tracking-widest font-mono text-white/40">Time Remaining</span>
+      <div className="flex items-baseline gap-2">
+        <div className="flex items-baseline gap-0.5">
+          <span className="text-xl sm:text-2xl font-serif font-bold text-luxury-gold tracking-tight">{timeLeft.days}</span>
+          <span className="text-[8px] uppercase tracking-widest font-mono text-white/30 ml-0.5">d</span>
+        </div>
+        <div className="text-sm font-light text-white/20 font-serif">:</div>
+        <div className="flex items-baseline gap-0.5">
+          <span className="text-xl sm:text-2xl font-serif font-bold text-luxury-gold tracking-tight">{String(timeLeft.hours).padStart(2, '0')}</span>
+          <span className="text-[8px] uppercase tracking-widest font-mono text-white/30 ml-0.5">h</span>
+        </div>
+        <div className="text-sm font-light text-white/20 font-serif">:</div>
+        <div className="flex items-baseline gap-0.5">
+          <span className="text-xl sm:text-2xl font-serif font-bold text-luxury-gold tracking-tight">{String(timeLeft.minutes).padStart(2, '0')}</span>
+          <span className="text-[8px] uppercase tracking-widest font-mono text-white/30 ml-0.5">m</span>
+        </div>
+        <div className="text-sm font-light text-white/20 font-serif">:</div>
+        <div className="flex items-baseline gap-0.5">
+          <span className="text-xl sm:text-2xl font-serif font-bold text-white/70 tracking-tight">{String(timeLeft.seconds).padStart(2, '0')}</span>
+          <span className="text-[8px] uppercase tracking-widest font-mono text-white/30 ml-0.5">s</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ClientDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -699,6 +768,21 @@ export default function ClientDashboard() {
                           <p className="mt-0.5">Hour: {soonestBooking.bookingDate.split("T")[1]?.slice(0, 5) || "09:00"}</p>
                         </div>
                       </div>
+
+                      {/* Countdown Timer */}
+                      {(soonestBooking.status === "confirmed" || soonestBooking.status === "pending") && (
+                        <div className="bg-white/[0.02] border border-white/5 p-4 rounded-xl flex items-center justify-between flex-wrap gap-4">
+                          <CountdownTimer targetDate={soonestBooking.bookingDate} />
+                          <div className="text-right flex flex-col items-end">
+                            <span className="text-[9px] font-mono uppercase tracking-widest text-white/40">Status Code</span>
+                            <span className={`text-xs font-bold uppercase font-mono mt-1 ${
+                              soonestBooking.status === "confirmed" ? "text-green-400" : "text-amber-400 animate-pulse"
+                            }`}>
+                              ● {soonestBooking.status}
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Line Milestone Steps graphics */}
                       <div className="relative pt-6 pb-2">

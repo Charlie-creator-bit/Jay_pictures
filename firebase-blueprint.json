@@ -13,6 +13,10 @@
           "type": "string",
           "description": "Unique email address associated with the user account"
         },
+        "phone": {
+          "type": "string",
+          "description": "The phone number of the user"
+        },
         "role": {
           "type": "string",
           "enum": ["admin", "client"],
