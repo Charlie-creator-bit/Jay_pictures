@@ -8,14 +8,13 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { handleFirestoreError, OperationType } from "../lib/firestore-error";
 import { Link, useNavigate } from "react-router-dom";
-import { Camera, Mail, Lock, User, AlertCircle } from "lucide-react";
+import { Camera, Mail, Lock, User, AlertCircle, Eye, EyeOff } from "lucide-react";
 import Button from "../components/ui/Button";
 
 const registerSchema = z.object({
   fullName: z.string().min(2, "Full name required"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["admin", "client"]),
 });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -24,10 +23,10 @@ export default function Register() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: "admin" }
   });
 
   const onSubmit = async (data: RegisterForm) => {
@@ -36,21 +35,29 @@ export default function Register() {
     try {
       const { user } = await createUserWithEmailAndPassword(auth, data.email, data.password);
       
-      // Create user document in Firestore with role
+      // Create user document in Firestore with role as client
       try {
         await setDoc(doc(db, "users", user.uid), {
           fullName: data.fullName,
           email: data.email,
-          role: "admin", // strictly force admin role
+          role: "client",
           createdAt: serverTimestamp(),
         });
       } catch (dbErr: any) {
         handleFirestoreError(dbErr, OperationType.WRITE, `users/${user.uid}`);
       }
 
-      navigate("/");
+      navigate("/book"); // direct them straight to the luxury booking calendar upon registering
     } catch (err: any) {
-      setError(err.message || "Registration failed");
+      let msg = err.message || "Registration failed";
+      if (err.code === "auth/email-already-in-use") {
+        msg = "This email address is already registered. If you already have an account, please click 'Sign In' below to log in.";
+      } else if (err.code === "auth/weak-password") {
+        msg = "The password is too weak. Please use a password with at least 6 characters.";
+      } else if (err.code === "auth/invalid-email") {
+        msg = "This is not a valid email address. Please check your spelling.";
+      }
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -68,11 +75,8 @@ export default function Register() {
             <Camera className="w-8 h-8 text-luxury-gold" />
             <span className="text-2xl font-serif tracking-tighter text-luxury-gold">JAY PICTURES</span>
           </Link>
-          <h2 className="text-3xl font-display text-white">Admin Portal</h2>
-          <p className="text-white/40 mt-2 text-xs">Create your secure site administrator account</p>
-          <div className="mt-4 p-3 bg-white/[0.02] border border-white/5 rounded-xl text-[10px] text-white/50 leading-relaxed text-center">
-            * Public visitor accounts are disabled. Guests can view the gallery and book sessions directly without creating credentials.
-          </div>
+          <h2 className="text-3xl font-display text-white">Create Account</h2>
+          <p className="text-white/40 mt-2 text-xs">Design your credentials to secure bookings & trace digital galleries</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -112,19 +116,40 @@ export default function Register() {
           <div>
             <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">Password</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-luxury-gold transition-colors focus:outline-none z-10"
+                title={showPassword ? "Hide password" : "Show password"}
+                id="register-password-left-toggle"
+              >
+                {showPassword ? (
+                  <Eye className="w-5 h-5" />
+                ) : (
+                  <Lock className="w-5 h-5" />
+                )}
+              </button>
               <input
                 {...register("password")}
-                type="password"
-                className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-luxury-gold transition-colors"
+                type={showPassword ? "text" : "password"}
+                className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-12 pr-12 text-white focus:outline-none focus:border-luxury-gold transition-colors"
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-luxury-gold transition-colors focus:outline-none z-10"
+                title={showPassword ? "Hide password" : "Show password"}
+                id="register-password-right-toggle"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
           </div>
 
           <Button type="submit" disabled={isLoading} className="w-full py-4 text-xs font-bold uppercase tracking-widest mt-4">
-            {isLoading ? "Creating administrator account..." : "Register Administrator"}
+            {isLoading ? "Creating account..." : "Create Client Account"}
           </Button>
         </form>
 

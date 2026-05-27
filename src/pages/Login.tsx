@@ -6,7 +6,7 @@ import { z } from "zod";
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { Link, useNavigate } from "react-router-dom";
-import { Camera, Mail, Lock, AlertCircle } from "lucide-react";
+import { Camera, Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import Button from "../components/ui/Button";
 
 const loginSchema = z.object({
@@ -20,6 +20,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -32,7 +33,13 @@ export default function Login() {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       navigate("/");
     } catch (err: any) {
-      setError(err.message || "Failed to sign in");
+      let msg = err.message || "Failed to sign in";
+      if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+        msg = "Invalid email or password. If you haven't created your account yet, please register first using the link at the bottom of the page.";
+      } else if (err.code === "auth/invalid-email") {
+        msg = "This is not a valid email address.";
+      }
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -88,13 +95,34 @@ export default function Login() {
           <div>
             <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">Password</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-luxury-gold transition-colors focus:outline-none z-10"
+                title={showPassword ? "Hide password" : "Show password"}
+                id="login-password-left-toggle"
+              >
+                {showPassword ? (
+                  <Eye className="w-5 h-5" />
+                ) : (
+                  <Lock className="w-5 h-5" />
+                )}
+              </button>
               <input
                 {...register("password")}
-                type="password"
-                className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-luxury-gold transition-colors"
+                type={showPassword ? "text" : "password"}
+                className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-12 pr-12 text-white focus:outline-none focus:border-luxury-gold transition-colors"
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-luxury-gold transition-colors focus:outline-none z-10"
+                title={showPassword ? "Hide password" : "Show password"}
+                id="login-password-right-toggle"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
           </div>

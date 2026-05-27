@@ -28,6 +28,7 @@ export default function ForgotPassword() {
     setIsLoading(true);
     setError(null);
     try {
+      // 1. Attempt branded premium email pipeline via custom backend (requires RESEND_API_KEY)
       const response = await fetch("/api/notifications/password-reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -39,7 +40,20 @@ export default function ForgotPassword() {
       }
       setIsSent(true);
     } catch (err: any) {
-      setError(err.message || "Failed to send reset email");
+      console.warn("Branded email dispatch fallback triggered:", err);
+      // 2. Automatic fail-safe fallback using standard client-side Firebase Auth emailer
+      try {
+        await sendPasswordResetEmail(auth, data.email);
+        setIsSent(true);
+      } catch (fbErr: any) {
+        let msg = fbErr.message || "Failed to dispatch recovery email.";
+        if (fbErr.code === "auth/user-not-found") {
+          msg = "This email address is not registered in our records.";
+        } else if (fbErr.code === "auth/invalid-email") {
+          msg = "This is not a valid email address.";
+        }
+        setError(msg);
+      }
     } finally {
       setIsLoading(false);
     }

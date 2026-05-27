@@ -34,26 +34,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
           handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
         }
-        if (userDoc && userDoc.exists()) {
-          setRole(userDoc.data().role as "admin" | "client");
-        } else if (!currentUser.isAnonymous) {
-          // If they signed in (e.g., via Google, external, or manual register) but no user doc exists in Firestore,
-          // dynamically provision their site admin document as only system administrators maintain registered sessions.
-          try {
-            await setDoc(doc(db, "users", currentUser.uid), {
-              fullName: currentUser.displayName || currentUser.email?.split("@")[0] || "Administrator",
-              email: currentUser.email || "",
-              role: "admin",
-              createdAt: serverTimestamp(),
-            });
-            setRole("admin");
-          } catch (createErr) {
-            console.error("Failed to auto-provision user record:", createErr);
-            setRole("client");
+        const ADMIN_EMAILS = [
+          "charlesadu3112@gmail.com",
+          "admin@jaypictures.com"
+        ];
+        
+        const userEmail = currentUser.email?.toLowerCase();
+        const isAdminEmail = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
+
+        if (isAdminEmail) {
+          setRole("admin");
+          if (!currentUser.isAnonymous) {
+            try {
+              await setDoc(doc(db, "users", currentUser.uid), {
+                fullName: currentUser.displayName || "Owner / Admin",
+                email: currentUser.email || "",
+                role: "admin",
+                createdAt: serverTimestamp(),
+              }, { merge: true });
+            } catch (err) {
+              console.warn("Failed syncing admin role in Firestore:", err);
+            }
           }
         } else {
-          // Fallback to client role for anonymous sessions
           setRole("client");
+          // If Firestore says admin but their email is not an authorized Admin email, demote them!
+          if (userDoc && userDoc.exists() && userDoc.data().role === "admin") {
+            try {
+              await setDoc(doc(db, "users", currentUser.uid), { role: "client" }, { merge: true });
+            } catch (err) {
+              console.warn("Demoting unauthorized admin in database:", err);
+            }
+          } else if (!currentUser.isAnonymous && (!userDoc || !userDoc.exists())) {
+            // Provision as a client
+            try {
+              await setDoc(doc(db, "users", currentUser.uid), {
+                fullName: currentUser.displayName || currentUser.email?.split("@")[0] || "Client Patron",
+                email: currentUser.email || "",
+                role: "client",
+                createdAt: serverTimestamp(),
+              });
+            } catch (createErr) {
+              console.error("Failed to auto-provision client user record:", createErr);
+            }
+          }
         }
       } else {
         setRole(null);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
 import { db, auth } from "../lib/firebase";
@@ -15,7 +15,7 @@ import {
   serverTimestamp,
   writeBatch
 } from "firebase/firestore";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { 
   Camera, 
   Calendar, 
@@ -28,7 +28,10 @@ import {
   AlertCircle,
   HelpCircle,
   Sparkles,
-  Info
+  Info,
+  Eye,
+  EyeOff,
+  Lock
 } from "lucide-react";
 import Button from "../components/ui/Button";
 import GlassCard from "../components/ui/GlassCard";
@@ -50,6 +53,35 @@ interface TimeSlot {
   bookingId?: string;
 }
 
+const getServiceCategory = (id: string, title: string): string => {
+  const name = (id + " " + title).toLowerCase();
+  if (name.includes("kids-studio") || name.includes("kids studio")) return "kids_studio";
+  if (name.includes("kids-outdoor") || name.includes("kids outdoor")) return "kids_outdoor";
+  if (name.includes("funeral-2d") || name.includes("funeral 2d") || name.includes("funeral_2d")) return "funeral_2d";
+  if (name.includes("funeral-3d") || name.includes("funeral 3d") || name.includes("funeral_3d")) return "funeral_3d";
+  if (name.includes("funeral")) return "funeral";
+  if (name.includes("corporate-2d") || name.includes("corporate 2d") || name.includes("corporate_2d")) return "corporate_2d";
+  if (name.includes("corporate")) return "corporate";
+  if (name.includes("wedding-2d") || name.includes("wedding 2-day") || name.includes("two-day")) return "wedding2";
+  if (name.includes("wedding") || name.includes("one-day") || name.includes("wedding1")) return "wedding1";
+  if (name.includes("outdoor")) return "outdoor";
+  return "studio";
+};
+
+const SERVICE_CATEGORIES = [
+  { id: "studio", name: "Studio" },
+  { id: "outdoor", name: "Outdoor" },
+  { id: "wedding1", name: "Wedding (1-Day)" },
+  { id: "wedding2", name: "Wedding (2-Day)" },
+  { id: "kids_studio", name: "Kids Studio" },
+  { id: "kids_outdoor", name: "Kids Outdoor" },
+  { id: "funeral", name: "Funeral (1-Day)" },
+  { id: "funeral_2d", name: "Funeral (2-Day)" },
+  { id: "funeral_3d", name: "Funeral (3-Day)" },
+  { id: "corporate", name: "Corporate (1-Day)" },
+  { id: "corporate_2d", name: "Corporate (2-Day)" }
+];
+
 export default function Book() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -60,6 +92,7 @@ export default function Book() {
   const [step, setStep] = useState(1);
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
+  const [activeCategory, setActiveCategory] = useState<string>("studio");
 
   // User selections
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -92,16 +125,86 @@ export default function Book() {
   const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
   const [createdPaymentId, setCreatedPaymentId] = useState<string | null>(null);
 
+  // Inline auth states for Step 3 if user is anonymous or guest
+  const [authTab, setAuthTab] = useState<"login" | "register">("login");
+  const [inlineEmail, setInlineEmail] = useState("");
+  const [inlinePassword, setInlinePassword] = useState("");
+  const [inlineFullName, setInlineFullName] = useState("");
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const [inlineLoading, setInlineLoading] = useState(false);
+  const [showInlinePassword, setShowInlinePassword] = useState(false);
+
+  const handleInlineLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInlineLoading(true);
+    setInlineError(null);
+    try {
+      const { signInWithEmailAndPassword } = await import("firebase/auth");
+      await signInWithEmailAndPassword(auth, inlineEmail, inlinePassword);
+    } catch (err: any) {
+      let msg = err.message || "Failed to sign in. Please verify your credentials.";
+      if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+        msg = "Invalid email or password. Please verify your credentials and try again.";
+      } else if (err.code === "auth/invalid-email") {
+        msg = "This is not a valid email address.";
+      }
+      setInlineError(msg);
+    } finally {
+      setInlineLoading(false);
+    }
+  };
+
+  const handleInlineRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inlineFullName.trim()) {
+      setInlineError("Please enter your full name.");
+      return;
+    }
+    setInlineLoading(true);
+    setInlineError(null);
+    try {
+      const { createUserWithEmailAndPassword } = await import("firebase/auth");
+      const credential = await createUserWithEmailAndPassword(auth, inlineEmail, inlinePassword);
+      
+      const userRef = doc(db, "users", credential.user.uid);
+      await setDoc(userRef, {
+        fullName: inlineFullName.trim(),
+        email: inlineEmail.trim(),
+        role: "client",
+        createdAt: serverTimestamp(),
+      });
+
+      setFullName(inlineFullName.trim());
+      setEmail(inlineEmail.trim());
+    } catch (err: any) {
+      let msg = err.message || "Registration failed. Please try again.";
+      if (err.code === "auth/email-already-in-use") {
+        msg = "This email address is already registered. If you already have an account, please click the 'Sign In' tab above to log in.";
+      } else if (err.code === "auth/weak-password") {
+        msg = "The password is too weak. Please use a password with at least 6 characters.";
+      } else if (err.code === "auth/invalid-email") {
+        msg = "This is not a valid email address.";
+      }
+      setInlineError(msg);
+    } finally {
+      setInlineLoading(false);
+    }
+  };
+
   // Initialize fields if user is signed in
   useEffect(() => {
-    if (user) {
+    if (user && !user.isAnonymous) {
       setEmail(user.email || "");
-      // Fetch user profile to pre-fill name
+      // Fetch user profile to pre-fill name and phone
       const fetchProfile = async () => {
         try {
           const userDoc = await getDoc(doc(db, "users", user.uid));
           if (userDoc.exists()) {
-            setFullName(userDoc.data().fullName || "");
+            const data = userDoc.data();
+            setFullName(data.fullName || "");
+            if (data.phone) {
+              setPhone(data.phone || "");
+            }
           }
         } catch (err) {
           console.error("Error reading profile:", err);
@@ -115,6 +218,7 @@ export default function Book() {
   useEffect(() => {
     const fetchServices = async () => {
       setLoadingServices(true);
+      let defaultServices: Service[] = [];
       try {
         const querySnapshot = await getDocs(collection(db, "services"));
         let serviceList: Service[] = [];
@@ -132,84 +236,295 @@ export default function Book() {
           }
         });
 
-        // Auto-seed if database services collection is completely empty
-        if (serviceList.length === 0) {
-          const defaultServices = [
-            {
-              id: "studio-starter",
-              title: "Studio Starter",
-              price: 600,
-              durationMinutes: 50,
-              description: "50 Min Session. Includes 7 Retouched Pictures, 1-2 Outfit changes, and high-resolution digital proof deliveries.",
-              isActive: true
-            },
-            {
-              id: "studio-standard",
-              title: "Studio Standard",
-              price: 800,
-              durationMinutes: 60,
-              description: "1 Hour Session. Includes 10 Retouched Pictures, 1-3 Outfit changes, and premium cinematic art direction layouts.",
-              isActive: true
-            },
-            {
-              id: "studio-premium",
-              title: "Studio Premium",
-              price: 1000,
-              durationMinutes: 80,
-              description: "1 Hour 20 Min Session. Includes 12 Retouched Pictures, 1-4 Outfit changes, and PROFESSIONAL MAKEUP fully included on set.",
-              isActive: true
-            },
-            {
-              id: "outdoor-starter",
-              title: "Outdoor Starter",
-              price: 700,
-              durationMinutes: 50,
-              description: "50 Min Session. Includes 6 Retouched Pictures, 1-2 Outfit changes, and outstanding natural-light portraits.",
-              isActive: true
-            },
-            {
-              id: "outdoor-standard",
-              title: "Outdoor Standard",
-              price: 900,
-              durationMinutes: 50,
-              description: "50 Min Session. Includes 10 Retouched Pictures, 1-3 Outfit changes, and premium professional outdoor creative setups.",
-              isActive: true
-            },
-            {
-              id: "outdoor-premium",
-              title: "Outdoor Premium",
-              price: 1100,
-              durationMinutes: 50,
-              description: "50 Min Session. Includes 12 Retouched Pictures, 1-4 Outfit changes, and premium customized natural location staging.",
-              isActive: true
-            },
-            {
-              id: "wedding-budget",
-              title: "One-Day Budget",
-              price: 2700,
-              durationMinutes: 480,
-              description: "Wedding One Day Coverage (Budget). Includes All Edited Event Pictures, Video Film (1 Min), Full Video, 1 Frame, 5 Exclusive couple Pictures, and premium Flash Drive delivery.",
-              isActive: true
-            },
-            {
-              id: "wedding-basic",
-              title: "One-Day Basic",
-              price: 3900,
-              durationMinutes: 600,
-              description: "Wedding One Day Coverage (Basic). Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Neatly Recorded Sound, PhotoBook, 12 Exclusive couple Pictures, Flash Drive, and Cloud Storage.",
-              isActive: true
-            },
-            {
-              id: "wedding-classic",
-              title: "One-Day Classic",
-              price: 4900,
-              durationMinutes: 720,
-              description: "Wedding One Day Coverage (Classic). Includes Pre-Wedding shoot, All Edited Event Pictures, 18 Exclusive couple Pictures, Cinematic Video Film (3-4 Mins), Neatly Recorded Sound, Couple Love Story Film, Drone coverage, PhotoBook, Two Frames, Full Edited Video, and Lifetime Cloud Storage.",
-              isActive: true
-            }
-          ];
+        defaultServices = [
+          // Studio Sessions
+          {
+            id: "studio-starter",
+            title: "Studio Starter",
+            price: 40,
+            durationMinutes: 50,
+            description: "50 Min Session. Includes 7 Retouched Pictures, 1-2 Outfit changes, and high-resolution digital proof deliveries.",
+            isActive: true
+          },
+          {
+            id: "studio-standard",
+            title: "Studio Standard",
+            price: 53,
+            durationMinutes: 60,
+            description: "1 Hour Session. Includes 10 Retouched Pictures, 1-3 Outfit changes, and premium cinematic art direction layouts.",
+            isActive: true
+          },
+          {
+            id: "studio-premium",
+            title: "Studio Premium",
+            price: 200,
+            durationMinutes: 80,
+            description: "1 Hour 20 Min Session. Includes 12 Retouched Pictures, 1-4 Outfit changes, and PROFESSIONAL MAKEUP fully included on set.",
+            isActive: true
+          },
+          // Outdoor Sessions
+          {
+            id: "outdoor-starter",
+            title: "Outdoor Starter",
+            price: 47,
+            durationMinutes: 50,
+            description: "50 Min Session. Includes 6 Retouched Pictures, 1-2 Outfit changes, and outstanding natural-light portraits.",
+            isActive: true
+          },
+          {
+            id: "outdoor-standard",
+            title: "Outdoor Standard",
+            price: 60,
+            durationMinutes: 50,
+            description: "50 Min Session. Includes 10 Retouched Pictures, 1-3 Outfit changes, and premium professional outdoor creative setups.",
+            isActive: true
+          },
+          {
+            id: "outdoor-premium",
+            title: "Outdoor Premium",
+            price: 73,
+            durationMinutes: 50,
+            description: "50 Min Session. Includes 12 Retouched Pictures, 1-4 Outfit changes, and premium customized natural location staging.",
+            isActive: true
+          },
+          // Wedding (1-Day)
+          {
+            id: "wedding-budget",
+            title: "One-Day Budget",
+            price: 200,
+            durationMinutes: 480,
+            description: "Wedding One Day Coverage (Budget). Includes All Edited Event Pictures, Video Film (1 Min), Full Video, 1 Frame, 5 Exclusive couple Pictures, and premium Flash Drive delivery.",
+            isActive: true
+          },
+          {
+            id: "wedding-basic",
+            title: "One-Day Basic",
+            price: 260,
+            durationMinutes: 600,
+            description: "Wedding One Day Coverage (Basic). Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Neatly Recorded Sound, PhotoBook, 12 Exclusive couple Pictures, Flash Drive, and Cloud Storage.",
+            isActive: true
+          },
+          {
+            id: "wedding-classic",
+            title: "One-Day Classic",
+            price: 327,
+            durationMinutes: 720,
+            description: "Wedding One Day Coverage (Classic). Includes Pre-Wedding shoot, All Edited Event Pictures, 18 Exclusive couple Pictures, Cinematic Video Film (3-4 Mins), Neatly Recorded Sound, Couple Love Story Film, Drone coverage, PhotoBook, Two Frames, Full Edited Video, and Lifetime Cloud Storage.",
+            isActive: true
+          },
+          // Wedding (2-Day)
+          {
+            id: "wedding-2d-budget",
+            title: "Two-Day Budget",
+            price: 233,
+            durationMinutes: 960,
+            description: "Wedding Two Day Coverage (Budget). Cost-effective two-day legacy coverage documenting all core ceremonies. Includes All Edited Event Pictures, Trailer Film (2 Mins), Full Video, 8 Exclusive couple Pictures, Flash Drive folder.",
+            isActive: true
+          },
+          {
+            id: "wedding-2d-basic",
+            title: "Two-Day Basic",
+            price: 327,
+            durationMinutes: 1200,
+            description: "Wedding Two Day Coverage (Basic). Fully structured dual-day visual production including high-end physical Photobooks and secure digital storage. Includes All Edited Event Pictures, Trailer Film (3 Mins), Neatly Recorded Sound, PhotoBook, 12 Exclusive couple Pictures, Flash Drive, Cloud Storage.",
+            isActive: true
+          },
+          {
+            id: "wedding-2d-classic",
+            title: "Two-Day Classic",
+            price: 460,
+            durationMinutes: 1440,
+            description: "Wedding Two Day Coverage (Classic). The non-compromise multi-day epic cinematic custom production. Includes Pre-Wedding shoot, All Edited Event Pictures, 20 Exclusive couple Pictures, Cinematic Video Film (3-4 Mins), Recorded Sound, Love Story, Drone, PhotoBook, Two Frames, Full Edited Video, Cloud Storage.",
+            isActive: true
+          },
+          // Kids Studio
+          {
+            id: "kids-studio-starter",
+            title: "Kids-Studio Starter",
+            price: 40,
+            durationMinutes: 50,
+            description: "Kids Studio Session (Starter). Bespoke studio experience crafted for beautiful portraits of your little ones. Includes 7 Retouched Pictures, 1-2 Outfit changes, child friendly backdrops.",
+            isActive: true
+          },
+          {
+            id: "kids-studio-gold",
+            title: "Kids-Studio Gold",
+            price: 47,
+            durationMinutes: 50,
+            description: "Kids Studio Session (Gold). Our signature, most loved child studio setup with custom playful props. Includes 9 Retouched Pictures, 1-3 Outfit changes.",
+            isActive: true
+          },
+          {
+            id: "kids-studio-luxury",
+            title: "Kids-Studio Luxury",
+            price: 60,
+            durationMinutes: 50,
+            description: "Kids Studio Session (Luxury). The complete elite luxury package with themed sets and full styling support. Includes 12 Retouched Pictures, 1-4 Outfit changes, themed sets.",
+            isActive: true
+          },
+          // Kids Outdoor
+          {
+            id: "kids-outdoor-starter",
+            title: "Kids-Outdoor Starter",
+            price: 60,
+            durationMinutes: 50,
+            description: "Kids Outdoor Session (Starter). Capturing organic outdoor child play or cozy home sessions with style. Includes 7 Retouched Pictures, 1-2 Outfit changes.",
+            isActive: true
+          },
+          {
+            id: "kids-outdoor-gold",
+            title: "Kids-Outdoor Gold",
+            price: 67,
+            durationMinutes: 50,
+            description: "Kids Outdoor Session (Gold). Scenic nature backdrops or beautifully staged multi-angle home designs. Includes 9 Retouched Pictures, 1-3 Outfit changes, dynamic focus capture.",
+            isActive: true
+          },
+          {
+            id: "kids-outdoor-luxury",
+            title: "Kids-Outdoor Luxury",
+            price: 80,
+            durationMinutes: 50,
+            description: "Kids Outdoor Session (Luxury). Advanced custom themed child location production with custom props. Includes 12 Retouched Pictures, 1-4 Outfit changes, custom themed setups.",
+            isActive: true
+          },
+          // Funeral (1-Day)
+          {
+            id: "funeral-basic",
+            title: "Funeral Basic",
+            price: 167,
+            durationMinutes: 480,
+            description: "Funeral One Day Coverage (Basic). Professional single-day coverage of funeral events, ceremonies, and family gatherings. Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video.",
+            isActive: true
+          },
+          {
+            id: "funeral-diamond",
+            title: "Funeral Diamond",
+            price: 233,
+            durationMinutes: 480,
+            description: "Funeral One Day Coverage (Diamond). Enhanced sound-monitored single day coverage containing family premium photobooks and portrait pictures. Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Sound, PhotoBook, 12 Exclusive Portrait/Family Pictures.",
+            isActive: true
+          },
+          {
+            id: "funeral-classic",
+            title: "Funeral Classic",
+            price: 327,
+            durationMinutes: 480,
+            description: "Funeral One Day Coverage (Classic). Complete non-compromise multi-angle cinematic production covering every sequence in detail. Includes All Edited Event Pictures, Cinematic Highlight (3-4 Mins), Recorded Sound, Drone, PhotoBook, Two Frames.",
+            isActive: true
+          },
+          // Funeral (2-Day)
+          {
+            id: "funeral-2d-basic",
+            title: "Funeral-2D Basic",
+            price: 213,
+            durationMinutes: 960,
+            description: "Funeral Two Days Coverage (Basic). Professional two-day coverage of funeral events, ceremonies, and family gatherings. Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Flash Drive.",
+            isActive: true
+          },
+          {
+            id: "funeral-2d-diamond",
+            title: "Funeral-2D Diamond",
+            price: 327,
+            durationMinutes: 960,
+            description: "Funeral Two Days Coverage (Diamond). Enhanced sound-monitored two days coverage containing family premium photobooks and portrait pictures. Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Sound, Premium PhotoBook, 12 Exclusive Portrait/Family Pictures.",
+            isActive: true
+          },
+          {
+            id: "funeral-2d-classic",
+            title: "Funeral-2D Classic",
+            price: 460,
+            durationMinutes: 960,
+            description: "Funeral Two Days Coverage (Classic). Complete non-compromise multi-angle cinematic production covering both days of sequence in detail. Includes All Edited Event Pictures, Cinematic Highlight (3-4 Mins), Sound, Drone, PhotoBook, Two Frames, Full Edited Video, Cloud Storage.",
+            isActive: true
+          },
+          // Funeral (3-Day)
+          {
+            id: "funeral-3d-basic",
+            title: "Funeral-3D Basic",
+            price: 320,
+            durationMinutes: 1440,
+            description: "Funeral Three Days Coverage (Basic). Professional three-day coverage of funeral events, ceremonies, and family gatherings. Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Flash Drive.",
+            isActive: true
+          },
+          {
+            id: "funeral-3d-diamond",
+            title: "Funeral-3D Diamond",
+            price: 460,
+            durationMinutes: 1440,
+            description: "Funeral Three Days Coverage (Diamond). Enhanced sound-monitored three days coverage containing family premium photobooks and portrait pictures. Includes All Edited Event Pictures, Highlight Film (2 Mins), Full Edited Video, Sound, Premium PhotoBook, 12 Exclusive couple Pictures.",
+            isActive: true
+          },
+          {
+            id: "funeral-3d-classic",
+            title: "Funeral-3D Classic",
+            price: 593,
+            durationMinutes: 1440,
+            description: "Funeral Three Days Coverage (Classic). Complete non-compromise multi-angle cinematic production covering all three days of events in detail. Includes All Edited Event Pictures, Cinematic Highlight (3-4 Mins), Sound, Drone, PhotoBook, Full Edited Video, Cloud Storage.",
+            isActive: true
+          },
+          // Corporate (1-Day)
+          {
+            id: "corporate-photo",
+            title: "Corporate Photo Only",
+            price: 67,
+            durationMinutes: 480,
+            description: "Corporate One Day Coverage (Photo Only). Professional high-resolution photography coverage for single-day corporate meetings, brand activations, and conferences. Includes All Edited Corporate Pictures, High-Resolution Digital Delivery, Professional Editing.",
+            isActive: true
+          },
+          {
+            id: "corporate-standard",
+            title: "Corporate Photo & Video (1 Pho, 1 Vid)",
+            price: 147,
+            durationMinutes: 480,
+            description: "Corporate One Day Coverage (Photo & Video Lite). Professional high-fidelity single-day coverage with dedicated photo and video capture. Includes All Edited Corporate Pictures, video highlight, full event video, sound capture.",
+            isActive: true
+          },
+          {
+            id: "corporate-deluxe-1",
+            title: "Corporate Photo & Video (1 Pho, 2 Vid)",
+            price: 200,
+            durationMinutes: 480,
+            description: "Corporate One Day Coverage (Photo & Video Full). Full comprehensive business event production with multi-camera angles and expanded media team. Includes All Edited Corporate Pictures, video highlight, full comprehensive video, sound capture.",
+            isActive: true
+          },
+          // Corporate (2-Day)
+          {
+            id: "corporate-2d-photo",
+            title: "Corporate-2D Photo Only",
+            price: 120,
+            durationMinutes: 960,
+            description: "Corporate Two Days Coverage (Photo Only). Two-day professional photography covering entire corporate forums, summits, or promotional activations. Includes All Edited Corporate Pictures, digital delivery, professional editing.",
+            isActive: true
+          },
+          {
+            id: "corporate-2d-standard",
+            title: "Corporate-2D Photo & Video Standard",
+            price: 193,
+            durationMinutes: 960,
+            description: "Corporate Two Days Coverage (Photo & Video Standard). Complete multi-media coverage over both consecutive event days for balanced photo and video documentation. Includes All Edited Corporate Pictures, video highlight, full event video.",
+            isActive: true
+          },
+          {
+            id: "corporate-2d-deluxe",
+            title: "Corporate-2D Photo & Video Deluxe",
+            price: 260,
+            durationMinutes: 960,
+            description: "Corporate Two Days Coverage (Photo & Video Deluxe). Borders corporate scale coverage over two full days with a high-capacity media team and flawless execution. Includes All Edited Corporate Pictures, video highlight, full video coverage, sound capture.",
+            isActive: true
+          }
+        ];
 
-          for (const svc of defaultServices) {
+        // Robust delta seeding check to repair prices and write missing ones
+        const existingIds = new Set(serviceList.map(s => s.id));
+        const missingOrMismatched = defaultServices.filter(svc => {
+          if (!existingIds.has(svc.id)) return true;
+          // Repair price if it exists in DB as legacy high numbers (indicating in Cedis instead of standard USD base)
+          const matchedDB = serviceList.find(s => s.id === svc.id);
+          return matchedDB && matchedDB.price > 150 && svc.price <= 150; // true means we override & repair
+        });
+
+        if (missingOrMismatched.length > 0) {
+          for (const svc of missingOrMismatched) {
             try {
               await setDoc(doc(db, "services", svc.id), {
                 title: svc.title,
@@ -219,30 +534,56 @@ export default function Book() {
                 isActive: svc.isActive,
                 createdAt: serverTimestamp(),
               });
-              serviceList.push(svc);
+              
+              // Correct the list item
+              const idxInList = serviceList.findIndex(s => s.id === svc.id);
+              if (idxInList !== -1) {
+                serviceList[idxInList] = svc;
+              } else {
+                serviceList.push(svc);
+              }
             } catch (seedErr) {
               console.warn(`Bypassed seeding for service ${svc.id}:`, seedErr);
             }
           }
         }
 
-        setServices(serviceList);
+        // If serviceList is empty, fall back to defaultServices so the UI is NEVER empty!
+        const finalServices = serviceList.length > 0 ? serviceList : defaultServices;
+        setServices(finalServices);
 
         // Pre-select package if matching parameter found
         if (preSelectedServiceId) {
-          const matched = serviceList.find(s => s.id === preSelectedServiceId || s.title.toLowerCase().includes(preSelectedServiceId.toLowerCase()));
+          const matched = finalServices.find(s => s.id === preSelectedServiceId || s.title.toLowerCase().includes(preSelectedServiceId.toLowerCase()));
           if (matched) {
             setSelectedService(matched);
+            const categoryMatched = getServiceCategory(matched.id, matched.title);
+            setActiveCategory(categoryMatched);
           }
         }
       } catch (err) {
         console.error("Error fetching services:", err);
+        // Fallback on total failure
+        try {
+          // defaultServices can be used as fallback directly if it is in scope
+          setServices(defaultServices);
+          if (preSelectedServiceId) {
+            const matched = defaultServices.find(s => s.id === preSelectedServiceId || s.title.toLowerCase().includes(preSelectedServiceId.toLowerCase()));
+            if (matched) {
+              setSelectedService(matched);
+              const categoryMatched = getServiceCategory(matched.id, matched.title);
+              setActiveCategory(categoryMatched);
+            }
+          }
+        } catch (_fallbackErr) {
+          console.error("Failed to apply fallback services:", _fallbackErr);
+        }
       } finally {
         setLoadingServices(false);
       }
     };
     fetchServices();
-  }, [preSelectedServiceId]);
+  }, [preSelectedServiceId, user]);
 
   // Load Available Time Slots whenever Date changes
   useEffect(() => {
@@ -390,12 +731,23 @@ export default function Book() {
           await setDoc(userRef, {
             fullName: fullName.trim(),
             email: email.trim(),
+            phone: phone.trim(),
             role: "client",
             createdAt: serverTimestamp()
           });
         } catch (uErr: any) {
           console.error("Failed creating users profile record:", uErr);
           throw new Error("Could not initialize guest profile for booking: " + (uErr.message || uErr));
+        }
+      } else if (!activeUser.isAnonymous) {
+        // If they are a registered user, update/merge their phone or fullName so it is remembered next time!
+        try {
+          await setDoc(userRef, {
+            phone: phone.trim(),
+            fullName: fullName.trim()
+          }, { merge: true });
+        } catch (uErr: any) {
+          console.warn("Failed saving profile info changes on book submit:", uErr);
         }
       }
 
@@ -563,6 +915,36 @@ export default function Book() {
                 <h3 className="text-xl font-display text-[#d4af37]">Choose photography scope</h3>
               </div>
 
+              {/* Comprehensive Category Tabs */}
+              <div className="py-2 border-b border-white/5">
+                <p className="text-[10px] uppercase font-mono tracking-widest text-[#d4af37] mb-3">Browse Creative Categories</p>
+                <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-white/15 scrollbar-track-transparent">
+                  {SERVICE_CATEGORIES.map((cat) => {
+                    const count = services.filter(s => getServiceCategory(s.id, s.title) === cat.id).length;
+                    const isActive = activeCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          setActiveCategory(cat.id);
+                          // Clear selection only if the current selection is NOT in this new category
+                          if (selectedService && getServiceCategory(selectedService.id, selectedService.title) !== cat.id) {
+                            setSelectedService(null);
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-full text-[10px] font-mono uppercase font-bold tracking-widest whitespace-nowrap transition-all border shrink-0 ${
+                          isActive
+                            ? "bg-luxury-gold text-black border-luxury-gold font-extrabold shadow-lg shadow-luxury-gold/10"
+                            : "bg-white/5 text-white/60 hover:text-white border-white/5"
+                        }`}
+                      >
+                        {cat.name} {count > 0 ? `(${count})` : "(0)"}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {loadingServices ? (
                 <div className="text-center py-20 text-white/40 text-sm">
                   Querying the archives for dynamic packages...
@@ -576,44 +958,53 @@ export default function Book() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {services.map((svc) => (
-                    <GlassCard 
-                      key={svc.id}
-                      onClick={() => setSelectedService(svc)}
-                      className={`cursor-pointer p-6 border transition-all ${
-                        selectedService?.id === svc.id 
-                          ? "border-luxury-gold bg-luxury-gold/5" 
-                          : "border-white/10 hover:border-white/20"
-                      }`}
-                    >
-                      <h4 className="text-lg font-serif text-white hover:text-luxury-gold mb-1">{svc.title}</h4>
-                      <div className="text-xl font-display text-luxury-gold mb-4">${svc.price.toLocaleString()}+</div>
-                      <p className="text-xs text-white/50 leading-relaxed mb-6 h-20 overflow-hidden line-clamp-4">{svc.description}</p>
-                      
-                      <div className="text-[10px] uppercase tracking-widest text-white/30 mb-4 border-t border-white/5 pt-4">Included deliverables</div>
-                      <ul className="space-y-2 mb-6">
-                        {getServiceFeatures(svc.title).slice(0, 3).map((feat, i) => (
-                          <li key={i} className="text-[10px] text-white/60 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-luxury-gold shrink-0" />
-                            {feat}
-                          </li>
-                        ))}
-                      </ul>
-
-                      <button 
-                        title="Book Now"
-                        label="book_now"
-                        className={`w-full py-2 rounded-lg text-[9px] uppercase tracking-widest font-bold transition-all ${
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {services
+                    .filter((s) => getServiceCategory(s.id, s.title) === activeCategory)
+                    .map((svc) => (
+                      <GlassCard 
+                        key={svc.id}
+                        onClick={() => setSelectedService(svc)}
+                        className={`cursor-pointer p-6 border transition-all flex flex-col justify-between ${
                           selectedService?.id === svc.id 
-                            ? "bg-luxury-gold text-black" 
-                            : "bg-white/5 hover:bg-white/10 text-white"
+                            ? "border-luxury-gold bg-luxury-gold/5" 
+                            : "border-white/10 hover:border-white/20"
                         }`}
                       >
-                        {selectedService?.id === svc.id ? "Selected Package" : "Select Package"}
-                      </button>
-                    </GlassCard>
-                  ))}
+                        <div>
+                          <h4 className="text-lg font-serif text-white hover:text-luxury-gold mb-1">{svc.title}</h4>
+                          <div className="text-xl font-display text-[#d4af37] mb-4">
+                            GH₵{(svc.price * 15).toLocaleString()}
+                            <span className="text-[10px] text-white/30 block font-mono mt-1 font-normal uppercase tracking-wider">
+                              ~${Math.round(svc.price).toLocaleString()} USD / ₦{Math.round(svc.price * 1400).toLocaleString()} NGN
+                            </span>
+                          </div>
+                          <p className="text-xs text-white/50 leading-relaxed mb-6 h-20 overflow-hidden line-clamp-4">{svc.description}</p>
+                          
+                          <div className="text-[10px] uppercase tracking-widest text-white/30 mb-4 border-t border-white/5 pt-4">Included deliverables</div>
+                          <ul className="space-y-2 mb-6">
+                            {getServiceFeatures(svc.title).slice(0, 3).map((feat, i) => (
+                              <li key={i} className="text-[10px] text-white/60 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-luxury-gold shrink-0" />
+                                <span className="line-clamp-2">{feat}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <button 
+                          title="Book Now"
+                          label="book_now"
+                          className={`w-full py-2.5 rounded-lg text-[9px] uppercase tracking-widest font-extrabold transition-all border mt-auto ${
+                            selectedService?.id === svc.id 
+                              ? "bg-luxury-gold text-black border-luxury-gold" 
+                              : "bg-white/5 hover:bg-white/10 text-white border-white/5"
+                          }`}
+                        >
+                          {selectedService?.id === svc.id ? "Selected Package" : "Select Package"}
+                        </button>
+                      </GlassCard>
+                    ))}
                 </div>
               )}
 
@@ -769,71 +1160,240 @@ export default function Book() {
               exit={{ opacity: 0, y: -15 }}
               className="space-y-8"
             >
-              <h3 className="text-xl font-display text-[#d4af37]">Creative vision</h3>
+              {!user || user.isAnonymous ? (
+                <div className="max-w-md mx-auto space-y-6">
+                  <div className="text-center space-y-2">
+                    <Sparkles className="w-8 h-8 text-luxury-gold mx-auto animate-pulse" />
+                    <h3 className="text-xl font-display text-white">Sign In or Create Account</h3>
+                    <p className="text-white/40 text-xs leading-relaxed max-w-sm mx-auto">
+                      JAY PICTURES requires an active client account to secure reservations. This allows you to check status, download custom digital galleries, and avoids having to enter registration information again.
+                    </p>
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">My Full Name</label>
-                  <div className="relative">
-                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
-                    <input
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-luxury-gold transition-colors"
-                      placeholder="Jane Cooper"
-                    />
+                  <div className="bg-[#0b0b0b] border border-white/5 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl">
+                    <div className="grid grid-cols-2 gap-4 border-b border-white/5 pb-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthTab("login");
+                          setInlineError(null);
+                        }}
+                        className={`py-2 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                          authTab === "login" ? "text-luxury-gold border-b-2 border-luxury-gold" : "text-white/40 hover:text-white"
+                        }`}
+                      >
+                        Sign In
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthTab("register");
+                          setInlineError(null);
+                        }}
+                        className={`py-2 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                          authTab === "register" ? "text-luxury-gold border-b-2 border-luxury-gold" : "text-white/40 hover:text-white"
+                        }`}
+                      >
+                        Create Account
+                      </button>
+                    </div>
+
+                    {inlineError && (
+                      <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-xs leading-relaxed text-center">
+                        {inlineError}
+                      </div>
+                    )}
+
+                    {authTab === "login" ? (
+                      <form onSubmit={handleInlineLogin} className="space-y-4">
+                        <div className="space-y-1">
+                          <label className="block text-[9px] uppercase tracking-widest font-bold text-luxury-gold">Email Address</label>
+                          <input
+                            type="email"
+                            required
+                            value={inlineEmail}
+                            onChange={(e) => setInlineEmail(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 text-white text-xs focus:outline-none focus:border-luxury-gold transition-colors"
+                            placeholder="jane@example.com"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center">
+                            <label className="block text-[9px] uppercase tracking-widest font-bold text-luxury-gold">Password</label>
+                            <Link 
+                              to="/forgot-password" 
+                              target="_blank"
+                              className="text-[9px] text-[#d4af37] font-sans hover:underline"
+                            >
+                              Forgot Password?
+                            </Link>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type={showInlinePassword ? "text" : "password"}
+                              required
+                              value={inlinePassword}
+                              onChange={(e) => setInlinePassword(e.target.value)}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-4 pr-10 text-white text-xs focus:outline-none focus:border-luxury-gold transition-colors"
+                              placeholder="••••••••"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowInlinePassword(!showInlinePassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-luxury-gold transition-colors focus:outline-none z-10"
+                              title={showInlinePassword ? "Hide password" : "Show password"}
+                              id="book-login-password-toggle"
+                            >
+                              {showInlinePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <Button
+                          type="submit"
+                          disabled={inlineLoading}
+                          className="w-full py-3 text-[10px] uppercase font-bold tracking-widest mt-2"
+                        >
+                          {inlineLoading ? "Signing In..." : "Sign In & Continue"}
+                        </Button>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleInlineRegister} className="space-y-4">
+                        <div className="space-y-1">
+                          <label className="block text-[9px] uppercase tracking-widest font-bold text-luxury-gold">Full Name</label>
+                          <input
+                            type="text"
+                            required
+                            value={inlineFullName}
+                            onChange={(e) => setInlineFullName(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 text-white text-xs focus:outline-none focus:border-luxury-gold transition-colors"
+                            placeholder="Jane Cooper"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[9px] uppercase tracking-widest font-bold text-luxury-gold">Email Address</label>
+                          <input
+                            type="email"
+                            required
+                            value={inlineEmail}
+                            onChange={(e) => setInlineEmail(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 text-white text-xs focus:outline-none focus:border-luxury-gold transition-colors"
+                            placeholder="jane@example.com"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[9px] uppercase tracking-widest font-bold text-luxury-gold">Password (min 6 characters)</label>
+                          <div className="relative">
+                            <input
+                              type={showInlinePassword ? "text" : "password"}
+                              required
+                              minLength={6}
+                              value={inlinePassword}
+                              onChange={(e) => setInlinePassword(e.target.value)}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-4 pr-10 text-white text-xs focus:outline-none focus:border-luxury-gold transition-colors"
+                              placeholder="••••••••"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowInlinePassword(!showInlinePassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-luxury-gold transition-colors focus:outline-none z-10"
+                              title={showInlinePassword ? "Hide password" : "Show password"}
+                              id="book-register-password-toggle"
+                            >
+                              {showInlinePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <Button
+                          type="submit"
+                          disabled={inlineLoading}
+                          className="w-full py-3 text-[10px] uppercase font-bold tracking-widest mt-2"
+                        >
+                          {inlineLoading ? "Creating Account..." : "Create Account & Continue"}
+                        </Button>
+                      </form>
+                    )}
+                  </div>
+
+                  <div className="flex justify-center">
+                    <Button variant="outline" onClick={() => setStep(2)} className="text-[10px] uppercase tracking-widest font-bold">
+                      Go Back
+                    </Button>
                   </div>
                 </div>
+              ) : (
+                <>
+                  <h3 className="text-xl font-display text-[#d4af37]">Creative vision</h3>
 
-                <div>
-                  <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">My Phone Number</label>
-                  <input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-luxury-gold transition-colors"
-                    placeholder="+1 (555) 012-3456"
-                  />
-                </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">My Full Name</label>
+                      <div className="relative">
+                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
+                        <input
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-luxury-gold transition-colors"
+                          placeholder="Jane Cooper"
+                        />
+                      </div>
+                    </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">My Email Address</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={user && !user.isAnonymous && !!user.email}
-                    className={`w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-luxury-gold transition-colors ${
-                      user && !user.isAnonymous && user.email ? "bg-white/2 border-white/5 text-white/50 cursor-not-allowed" : ""
-                    }`}
-                    placeholder="jane@example.com"
-                  />
-                  <p className="text-[9px] text-white/30 tracking-wide mt-1.5">Where we will coordinate your booking confirmation and session deliverables.</p>
-                </div>
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">My Phone Number</label>
+                      <input
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-luxury-gold transition-colors"
+                        placeholder="+1 (555) 012-3456"
+                      />
+                    </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">Session Vision & Style Notes</label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={4}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-luxury-gold transition-colors resize-none"
-                    placeholder="Describe locations, color theme concepts, outfits, or stylistic requests..."
-                  />
-                </div>
-              </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">My Email Address</label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={user && !user.isAnonymous && !!user.email}
+                        className={`w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-luxury-gold transition-colors ${
+                          user && !user.isAnonymous && user.email ? "bg-white/2 border-white/5 text-white/50 cursor-not-allowed" : ""
+                        }`}
+                        placeholder="jane@example.com"
+                      />
+                      <p className="text-[9px] text-white/30 tracking-wide mt-1.5">Where we will coordinate your booking confirmation and session deliverables.</p>
+                    </div>
 
-              <div className="flex justify-between pt-6 border-t border-white/5">
-                <Button variant="outline" onClick={() => setStep(2)} className="text-[10px] uppercase tracking-widest font-bold">
-                  Go Back
-                </Button>
-                <Button 
-                  disabled={!fullName.trim() || !phone.trim() || !email.trim()}
-                  onClick={() => setStep(4)}
-                  className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold"
-                >
-                  Continue to checkout <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">Session Vision & Style Notes</label>
+                      <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        rows={4}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-luxury-gold transition-colors resize-none"
+                        placeholder="Describe locations, color theme concepts, outfits, or stylistic requests..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between pt-6 border-t border-white/5">
+                    <Button variant="outline" onClick={() => setStep(2)} className="text-[10px] uppercase tracking-widest font-bold">
+                      Go Back
+                    </Button>
+                    <Button 
+                      disabled={!fullName.trim() || !phone.trim() || !email.trim()}
+                      onClick={() => setStep(4)}
+                      className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold"
+                    >
+                      Continue to checkout <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </>
+              )}
             </motion.div>
           )}
 
@@ -936,6 +1496,25 @@ export default function Book() {
                   </div>
                 </div>
 
+                {/* Terms and conditions agreement note */}
+                <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 space-y-3 font-mono text-[10.5px]">
+                  <p className="text-[#d4af37] font-bold uppercase tracking-wider">Booking Terms &amp; Policies</p>
+                  <ul className="space-y-1.5 text-white/50 text-left list-decimal list-inside leading-relaxed">
+                    <li>Events outside Accra require client-funded transportation and accommodation.</li>
+                    <li>Make a secure 50% deposit now to reserve and lock in your session slot.</li>
+                    <li>The remaining 50% balance is payable on or before your scheduled event date.</li>
+                  </ul>
+                  <label className="flex items-start gap-2 pt-1 cursor-pointer select-none">
+                    <input 
+                      type="checkbox" 
+                      required 
+                      defaultChecked 
+                      className="mt-0.5 rounded border-white/20 bg-black text-[#d4af37] checked:bg-[#d4af37]"
+                    />
+                    <span className="text-white/70 leading-normal font-sans text-[11px]">I agree strictly to the Terms &amp; Conditions stated above.</span>
+                  </label>
+                </div>
+
                 <div className="flex justify-between pt-4">
                   <Button variant="outline" onClick={() => setStep(3)} className="text-[10px] uppercase tracking-widest font-bold">
                     Go Back
@@ -958,8 +1537,10 @@ export default function Book() {
                   <div className="space-y-4">
                     <div>
                       <span className="text-[10px] uppercase tracking-wider text-white/40 block">Shoot Package</span>
-                      <span className="text-sm font-serif font-bold text-white">{selectedService?.title}</span>
-                      <span className="text-xs block text-white/40">Base Price: ${selectedService?.price.toLocaleString()}</span>
+                      <span className="text-sm font-serif font-bold text-white block">{selectedService?.title}</span>
+                      <span className="text-xs text-[#d4af37] font-mono mt-0.5 block">
+                        Base Price: GH₵{((selectedService?.price || 0) * 15).toLocaleString()} (~${selectedService?.price} USD)
+                      </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 border-t border-white/5 pt-3">

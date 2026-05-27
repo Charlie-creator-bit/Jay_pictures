@@ -349,7 +349,7 @@ export default function AdminDashboard() {
         {
           id: "studio-premium",
           title: "Studio Premium",
-          price: 1000,
+          price: 3000,
           durationMinutes: 80,
           description: "1 Hour 20 Min Session. Includes 12 Retouched Pictures, 1-4 Outfit changes, and PROFESSIONAL MAKEUP fully included on set.",
           isActive: true
@@ -381,7 +381,7 @@ export default function AdminDashboard() {
         {
           id: "wedding-budget",
           title: "One-Day Budget",
-          price: 2700,
+          price: 3000,
           durationMinutes: 480,
           description: "Wedding One Day Coverage (Budget). Includes All Edited Event Pictures, Video Film (1 Min), Full Video, 1 Frame, 5 Exclusive couple Pictures, and premium Flash Drive delivery.",
           isActive: true
@@ -510,7 +510,7 @@ export default function AdminDashboard() {
         {
           id: "corporate-photo-video-standard",
           title: "Corporate Photo & Video Standard",
-          price: 2000,
+          price: 2200,
           durationMinutes: 480,
           description: "Corporate 1-Day coverage (Photo & Video). Includes all edited corporate pictures, HD video highlight film, full video coverage, audio recording, 1 photographer & 1 videographer.",
           isActive: true
@@ -518,7 +518,7 @@ export default function AdminDashboard() {
         {
           id: "corporate-photo-video-deluxe",
           title: "Corporate Photo & Video Deluxe",
-          price: 2500,
+          price: 3000,
           durationMinutes: 480,
           description: "Corporate 1-Day coverage (Photo & Video Deluxe). Includes all edited corporate pictures, enhanced video highlight film, full comprehensive video, multi-angle audio recording, 1 photographer & 2 videographers.",
           isActive: true

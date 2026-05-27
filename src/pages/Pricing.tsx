@@ -45,8 +45,8 @@ const categories = {
     },
     {
       name: "Studio Premium",
-      price: 1000,
-      priceLabel: "GH₵1,000",
+      price: 3000,
+      priceLabel: "GH₵3,000",
       duration: "1Hr 20Min Session",
       popular: false,
       subtitle: "The complete elite package with personal makeup artist fully included on set.",
@@ -119,8 +119,8 @@ const categories = {
   wedding1: [
     {
       name: "One-Day Budget",
-      price: 2700,
-      priceLabel: "GH₵2,700",
+      price: 3000,
+      priceLabel: "GH₵3,000",
       duration: "One Day Coverage",
       popular: false,
       subtitle: "Streamlined single-day coverage focusing on the essential core ceremonies.",
@@ -517,18 +517,18 @@ const categories = {
         "All Edited Corporate Pictures",
         "High-Resolution Digital Delivery",
         "Professional Editing & Color Grading",
-        "1 Senior Photographer Team",
+        "1 Senior Photographer",
         "Full commercial usage rights",
         "Terms and conditions applied"
       ]
     },
     {
-      name: "Corporate Photo & Video Standard",
-      price: 2000,
-      priceLabel: "GH₵2,000",
+      name: "Corporate Photo & Video (1 Pho, 1 Vid)",
+      price: 2200,
+      priceLabel: "GH₵2,200",
       duration: "One Day Coverage",
       popular: true,
-      subtitle: "Our signature single-day business production package including professional high-fidelity sound, photography and video coverage.",
+      subtitle: "Professional high-fidelity single-day coverage with dedicated photo and video capture.",
       features: [
         "All Edited Corporate Pictures",
         "High-definition Video Highlight Film",
@@ -541,12 +541,12 @@ const categories = {
       ]
     },
     {
-      name: "Corporate Photo & Video Deluxe",
-      price: 2500,
-      priceLabel: "GH₵2,500",
+      name: "Corporate Photo & Video (1 Pho, 2 Vid)",
+      price: 3000,
+      priceLabel: "GH₵3,000",
       duration: "One Day Coverage",
       popular: false,
-      subtitle: "Ultra comprehensive business event production with multi-camera angles and expanded crew capacity for maximum coverage.",
+      subtitle: "Full comprehensive business event production with multi-camera angles and expanded media team.",
       features: [
         "All Edited Corporate Pictures",
         "Enhanced Video Highlight Film",
@@ -1323,19 +1323,61 @@ export default function PricingPage() {
         </div>
 
         {/* Studio terms of service guidelines */}
-        <div className="max-w-4xl mx-auto border-t border-white/5 pt-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs leading-relaxed text-white/40 font-mono">
-            <div className="space-y-3">
-              <h4 className="text-[#d4af37] font-bold uppercase tracking-wider text-[10px]">Travel & Destination Terms</h4>
-              <p>
-                Our standard packages include full coverage for locations within a 50-mile radius of our heritage studio. Destination options in other countries carry customized global travel, boarding guidelines, and scheduling arrangements handled collaboratively online.
-              </p>
+        <div className="max-w-4xl mx-auto border-t border-white/5 pt-16">
+          <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-8 sm:p-10 space-y-8">
+            <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+              <Info className="w-5 h-5 text-[#d4af37]" />
+              <h3 className="text-base font-serif text-white uppercase tracking-wider font-semibold">Official Terms &amp; Conditions</h3>
             </div>
-            <div className="space-y-3">
-              <h4 className="text-[#d4af37] font-bold uppercase tracking-wider text-[10px]">Intellectual Property</h4>
-              <p>
-                All digital images include personal/commercial promotion exhibition license privileges. Exclusive copyright buyouts are also available for major corporate and record labels on request during consultation phases.
-              </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs leading-relaxed text-white/50 font-sans">
+              
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <h4 className="text-[#d4af37] font-bold uppercase tracking-widest text-[10px] font-mono">1. Out-Of-Accra Coverage</h4>
+                  <p className="text-white/40 font-serif italic text-[11px]">Note: All events/shoots located outside of Greater Accra attract additional logistics surcharges.</p>
+                </div>
+                <ul className="space-y-2.5 text-white/60">
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#d4af37] font-bold">1.1</span>
+                    <span><strong>Transportation &amp; Lodging:</strong> Travel expenses, land transport, and accommodation for the visual media crew must be fully covered/financed by the client.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#d4af37] font-bold">1.2</span>
+                    <span>Schedules and logistics routes should be clear and organized in partnership with our studio dispatch.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-[#d4af37] font-bold uppercase tracking-widest text-[10px] font-mono">2. Retainer &amp; Payments</h4>
+                <ul className="space-y-2.5 text-white/60">
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#d4af37] font-bold">2.1</span>
+                    <span><strong>Secure Retainer Deposit:</strong> To securely lock your date block inside our reservation calendar, an initial <strong>50% deposit</strong> payment is strictly required at time of booking lock-in.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#d4af37] font-bold">2.2</span>
+                    <span><strong>Outstanding Balances:</strong> Unless settled on specific pre-shoot plans, all remaining balances are due on or before the day of the shoot/event production.</span>
+                  </li>
+                </ul>
+              </div>
+
+            </div>
+
+            <div className="border-t border-white/5 pt-6 grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs text-white/40">
+              <div className="space-y-2">
+                <h5 className="text-[#d4af37] font-bold uppercase text-[9px] tracking-wider font-mono">Intellectual Property Rights</h5>
+                <p className="font-sans leading-relaxed text-[11px]">
+                  All digital assets package rates include core personal and standard marketing/promotional exhibition license privileges. Full copyright buyout or master source raw file acquisitions are subject to custom contracts.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <h5 className="text-[#d4af37] font-bold uppercase text-[9px] tracking-wider font-mono">Booking Adjustments</h5>
+                <p className="font-sans leading-relaxed text-[11px]">
+                  Rescheduling requested at least 7 business days prior to set dates may carry over the retainer, subject strictly to calendar availability. Cancellations without reschedule carry a retention fee.
+                </p>
+              </div>
             </div>
           </div>
         </div>
