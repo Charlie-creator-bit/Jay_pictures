@@ -550,8 +550,15 @@ export default function ClientDashboard() {
                     : "bg-red-500/10 border-red-500/20 text-red-400"
                 }`}
               >
-                {statusMsg.type === "success" ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                <span>{statusMsg.text}</span>
+                {statusMsg.type === "success" ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+                <span className="flex-1">{statusMsg.text}</span>
+                <button 
+                  onClick={() => setStatusMsg(null)}
+                  className="p-1 hover:bg-white/10 rounded transition-colors text-white/60 hover:text-white"
+                  aria-label="Dismiss notification"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </motion.div>
             )}
           </AnimatePresence>

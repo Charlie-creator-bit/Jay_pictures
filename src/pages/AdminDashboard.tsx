@@ -1094,8 +1094,15 @@ export default function AdminDashboard() {
                     : "bg-red-500/10 border-red-500/30 text-red-400"
                 }`}
               >
-                {dbStatusMsg.type === "success" ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                <span>{dbStatusMsg.text}</span>
+                {dbStatusMsg.type === "success" ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+                <span className="flex-1">{dbStatusMsg.text}</span>
+                <button 
+                  onClick={() => setDbStatusMsg(null)}
+                  className="p-1 hover:bg-white/10 rounded transition-colors text-white/60 hover:text-white"
+                  aria-label="Dismiss notification"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </motion.div>
             )}
           </AnimatePresence>

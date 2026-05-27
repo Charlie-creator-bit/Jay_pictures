@@ -21,9 +21,15 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isSignedIn() && (
+        (request.auth.token.email_verified == true && (
+          request.auth.token.email.toLowerCase() == 'charlesadu3112@gmail.com' ||
+          request.auth.token.email.toLowerCase() == 'admin@jaypictures.com'
+        )) || (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        )
+      );
     }
 
     function incoming() {
