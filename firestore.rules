@@ -48,8 +48,7 @@ service cloud.firestore {
              data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 200 &&
              data.email is string && data.email.size() > 0 && data.email.size() <= 200 &&
              (!data.keys().hasAll(['phone']) || (data.phone is string && data.phone.size() <= 50)) &&
-             (data.role == 'admin' || data.role == 'client') &&
-             data.createdAt == request.time;
+             (data.role == 'admin' || data.role == 'client');
     }
 
     function isValidService(data) {
@@ -58,8 +57,7 @@ service cloud.firestore {
              data.description is string && data.description.size() > 0 && data.description.size() <= 2000 &&
              (data.price is number || data.price is int) && data.price >= 0 &&
              data.durationMinutes is int && data.durationMinutes > 0 &&
-             data.isActive is bool &&
-             data.createdAt == request.time;
+             data.isActive is bool;
     }
 
     function isValidBooking(data) {
@@ -139,7 +137,7 @@ service cloud.firestore {
       allow list: if isAdmin(); // Users should not blanket read profiles
       
       allow create: if isSignedIn() && isValidId(userId) && (
-        (isOwner(userId) && isValidUser(incoming()) && (incoming().role == 'client' || incoming().role == 'admin')) ||
+        (isOwner(userId) && isValidUser(incoming()) && incoming().createdAt == request.time && (incoming().role == 'client' || incoming().role == 'admin')) ||
         isAdmin()
       );
       
@@ -161,7 +159,7 @@ service cloud.firestore {
       allow read: if true; // Public package browsing
       
       allow create: if (isAdmin() || isSignedIn()) && isValidId(serviceId) && isValidService(incoming()) && incoming().createdAt == request.time;
-      allow update: if isAdmin() && isValidId(serviceId) && isValidService(incoming());
+      allow update: if isAdmin() && isValidId(serviceId) && isValidService(incoming()) && incoming().createdAt == existing().createdAt;
       allow delete: if isAdmin() && isValidId(serviceId);
     }
 
