@@ -24,7 +24,7 @@ export default function Navbar() {
   const navLinks = [
     { name: "Gallery", href: "/gallery", show: true, isRoute: true },
     { name: "Services", href: "/services", show: true, isRoute: true },
-    { name: "Testimonials", href: "/testimonials", show: true, isRoute: true },
+    { name: "About", href: "/about", show: true, isRoute: true },
     { name: "Pricing", href: "/pricing", show: true, isRoute: true },
     { name: "Book", href: "/book", show: true, isRoute: true },
   ];

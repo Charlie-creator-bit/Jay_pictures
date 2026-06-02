@@ -11,7 +11,7 @@ import Navbar from "./components/Navbar.tsx";
 import Hero from "./components/Hero.tsx";
 import Portfolio from "./components/Portfolio.tsx";
 import Services from "./components/Services.tsx";
-import Testimonials from "./components/Testimonials.tsx";
+import AboutSection from "./components/AboutSection.tsx";
 import Pricing from "./components/Pricing.tsx";
 import Footer from "./components/Footer.tsx";
 
@@ -23,7 +23,7 @@ import ClientDashboard from "./pages/ClientDashboard.tsx";
 import Book from "./pages/Book.tsx";
 import Gallery from "./pages/Gallery.tsx";
 import ServicesPage from "./pages/Services.tsx";
-import TestimonialsPage from "./pages/Testimonials.tsx";
+import AboutPage from "./pages/About.tsx";
 import PricingPage from "./pages/Pricing.tsx";
 import PaymentCallback from "./pages/PaymentCallback.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
@@ -49,7 +49,7 @@ function AppContent() {
             <Hero />
             <Portfolio />
             <Services />
-            <Testimonials />
+            <AboutSection />
             <Pricing />
             <Footer />
           </main>
@@ -57,7 +57,7 @@ function AppContent() {
         
         <Route path="/gallery" element={<Gallery />} />
         <Route path="/services" element={<ServicesPage />} />
-        <Route path="/testimonials" element={<TestimonialsPage />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
