@@ -15,7 +15,10 @@ interface VerificationResult {
 export default function PaymentCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const reference = searchParams.get("reference");
+  const txRef = searchParams.get("tx_ref");
+  const transactionId = searchParams.get("transaction_id");
+  const reference = transactionId || txRef || searchParams.get("reference");
+  const urlStatus = searchParams.get("status");
 
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
@@ -28,6 +31,13 @@ export default function PaymentCallback() {
   const [bookingInfo, setBookingInfo] = useState<any>(null);
 
   useEffect(() => {
+    if (urlStatus && urlStatus !== "successful" && urlStatus !== "completed") {
+      setLoading(false);
+      setSuccess(false);
+      setErrorMsg(`Transaction canceled or failed with status: ${urlStatus}`);
+      return;
+    }
+
     if (!reference) {
       setLoading(false);
       setSuccess(false);
@@ -39,7 +49,7 @@ export default function PaymentCallback() {
 
     const verifyPayment = async () => {
       try {
-        const response = await fetch(`/api/paystack/verify/${encodeURIComponent(reference)}`);
+        const response = await fetch(`/api/flutterwave/verify/${encodeURIComponent(reference)}`);
         const result = await response.json();
 
         if (!active) return;
@@ -88,7 +98,7 @@ export default function PaymentCallback() {
     return () => {
       active = false;
     };
-  }, [reference]);
+  }, [reference, urlStatus]);
 
   const handlePrint = () => {
     window.print();
@@ -103,7 +113,7 @@ export default function PaymentCallback() {
         </div>
         <h2 className="text-xl font-display uppercase tracking-widest text-luxury-gold mb-2">Ledger Verification</h2>
         <p className="text-white/40 text-xs font-mono max-w-sm text-center">
-          Reconciling payment reference with Paystack secure channels. Please do not close or reload this page...
+          Reconciling payment reference with Flutterwave secure channels. Please do not close or reload this page...
         </p>
       </div>
     );
@@ -135,7 +145,7 @@ export default function PaymentCallback() {
               </div>
               {reference && (
                 <div className="flex justify-between pt-1">
-                  <span>Paystack Ref:</span>
+                  <span>Flutterwave Ref:</span>
                   <span className="font-semibold">{reference}</span>
                 </div>
               )}
@@ -203,7 +213,7 @@ export default function PaymentCallback() {
                   <p className="text-[10px] uppercase tracking-widest text-white/40 print:text-black/50 font-sans font-bold">Digital Invoice</p>
                   <p className="text-white print:text-black font-bold text-sm">{invoiceId}</p>
                   <p className="text-white/50 print:text-black/50">Date: {invoiceDate}</p>
-                  <p className="text-white/50 print:text-black/50">Gateway: Paystack System</p>
+                  <p className="text-white/50 print:text-black/50">Gateway: Flutterwave System</p>
                   <p className="text-white/50 print:text-black/50">Status: <span className="text-green-400 font-bold uppercase print:text-green-600">PAID</span></p>
                 </div>
               </header>

@@ -133,9 +133,9 @@
           "enum": ["pending", "paid", "failed", "refunded"],
           "description": "Current processing status of the logged transaction"
         },
-        "stripePaymentIntentId": {
+        "flutterwaveReference": {
           "type": "string",
-          "description": "Stripe-provided reference code linking to processed payment gateway transaction"
+          "description": "Flutterwave-provided unique transaction reference linking to the processed payment gateway ledger"
         },
         "createdAt": {
           "type": "string",

@@ -97,6 +97,7 @@ interface Payment {
   currency: string;
   status: "pending" | "paid" | "failed" | "refunded";
   stripePaymentIntentId?: string;
+  flutterwaveReference?: string;
   paystackReference?: string;
   paidCurrency?: string;
   paidAmountLocal?: number;
@@ -261,6 +262,7 @@ export default function AdminDashboard() {
           currency: data.currency || "USD",
           status: data.status || "pending",
           stripePaymentIntentId: data.stripePaymentIntentId || "",
+          flutterwaveReference: data.flutterwaveReference || "",
           paystackReference: data.paystackReference || "",
           paidAmountLocal: data.paidAmountLocal || 0,
           paidCurrency: data.paidCurrency || "",
@@ -1961,7 +1963,7 @@ export default function AdminDashboard() {
                                     {p.id}
                                   </td>
                                   <td className="py-4 px-6 text-white/50 break-words max-w-[150px]">
-                                    {p.paystackReference || <span className="text-red-400">pi_offline_mock</span>}
+                                    {p.flutterwaveReference || p.paystackReference || <span className="text-red-400">pi_offline_mock</span>}
                                   </td>
                                   <td className="py-4 px-6 font-semibold text-white">
                                     ${p.amount.toLocaleString()} USD

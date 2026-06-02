@@ -117,7 +117,7 @@ export default function Book() {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Paystack states
+  // Flutterwave states
   const [amountType, setAmountType] = useState<"deposit" | "full">("deposit");
   const [paymentCurrency, setPaymentCurrency] = useState<"USD" | "GHS" | "NGN">("USD");
 
@@ -721,11 +721,27 @@ export default function Book() {
 
     let activeUser = user;
     try {
+      console.log("[BOOK DEBUG] Starting handleFinalBooking checkout process with states:", {
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        selectedDate,
+        selectedTime,
+        amountType,
+        paymentCurrency,
+        selectedService: selectedService ? { id: selectedService.id, title: selectedService.title, price: selectedService.price } : null,
+        currentUser: user ? { uid: user.uid, email: user.email, isAnonymous: user.isAnonymous } : null
+      });
+
       if (!activeUser) {
-        // Automatically perform background silent sign-in on submission
+        console.log("[BOOK DEBUG] No active user session detected. Automatically proceeding with background anonymous authentication...");
         const { signInAnonymously } = await import("firebase/auth");
         const userCredential = await signInAnonymously(auth);
         activeUser = userCredential.user;
+        console.log("[BOOK DEBUG] Background anonymous authentication completed successfully:", {
+          uid: activeUser.uid,
+          isAnonymous: activeUser.isAnonymous
+        });
       }
 
       if (!activeUser) {
@@ -736,37 +752,47 @@ export default function Book() {
       const slotId = `${selectedDate}_${selectedTime.replace(":", "")}`;
       const slotRef = doc(db, "availability", slotId);
       
-      // Secondary server check to prevent double bookings
+      console.log("[BOOK DEBUG] Reading slot details from availability collection...", { slotId });
       const slotSnap = await getDoc(slotRef);
       if (slotSnap.exists() && slotSnap.data().isBooked) {
+        console.warn("[BOOK DEBUG] Collision detected! Slot is already marked booked:", slotSnap.data());
         throw new Error("This slot was booked by another client during your checkout. Please select a different time.");
       }
+      console.log("[BOOK DEBUG] Slot available or not yet registered. Proceeding...");
 
       // Ensure users/{userId} profile exists for database constraint validation
       const userRef = doc(db, "users", activeUser.uid);
+      console.log("[BOOK DEBUG] Verifying client profile record presence...", { userPath: `users/${activeUser.uid}` });
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) {
+        console.log("[BOOK DEBUG] Client profile doc not found. Creating a new profile record path...");
         try {
-          await setDoc(userRef, {
+          const userPayload = {
             fullName: fullName.trim(),
             email: email.trim(),
             phone: phone.trim(),
             role: "client",
             createdAt: serverTimestamp()
-          });
+          };
+          console.log("[BOOK DEBUG] Submitting users profile creation setDoc payload:", userPayload);
+          await setDoc(userRef, userPayload);
+          console.log("[BOOK DEBUG] Client profile written successfully.");
         } catch (uErr: any) {
-          console.error("Failed creating users profile record:", uErr);
+          console.error("[BOOK DEBUG] Failed writing client user profile record:", uErr);
           throw new Error("Could not initialize guest profile for booking: " + (uErr.message || uErr));
         }
       } else if (!activeUser.isAnonymous) {
-        // If they are a registered user, update/merge their phone or fullName so it is remembered next time!
+        console.log("[BOOK DEBUG] Client profile doc exists. Updating details as a registered user...");
         try {
-          await setDoc(userRef, {
+          const userPayload = {
             phone: phone.trim(),
             fullName: fullName.trim()
-          }, { merge: true });
+          };
+          console.log("[BOOK DEBUG] Merging users profile setDoc merge:true payload:", userPayload);
+          await setDoc(userRef, userPayload, { merge: true });
+          console.log("[BOOK DEBUG] Client profile merged/updated successfully.");
         } catch (uErr: any) {
-          console.warn("Failed saving profile info changes on book submit:", uErr);
+          console.warn("[BOOK DEBUG] Non-blocking warning: Failed saving profile info updates on book submit:", uErr);
         }
       }
 
@@ -785,50 +811,97 @@ export default function Book() {
         updatedAt: serverTimestamp(),
       };
 
+      console.log("[BOOK DEBUG] Writing main Booking document path...", {
+        bookingId,
+        bookingPath: `bookings/${bookingId}`,
+        bookingData
+      });
       try {
         await setDoc(bookingRef, bookingData);
+        console.log("[BOOK DEBUG] Booking document created successfully in Firestore.");
       } catch (err: any) {
+        console.error("[BOOK DEBUG] CRITICAL: setDoc on bookings collection failed with error:", err);
         handleFirestoreError(err, OperationType.WRITE, `bookings/${bookingId}`);
       }
 
       // 2. Perform the matching slot reservation update in availability
+      console.log("[BOOK DEBUG] Securing availability slot state...", { slotId, slotPath: `availability/${slotId}` });
       try {
         if (!slotSnap.exists()) {
-          // If virtual slot, dynamically create it in the database on-demand
-          await setDoc(slotRef, {
+          const virtualSlotPayload = {
             date: selectedDate,
             time: selectedTime,
             isBooked: true,
             bookingId: bookingId
-          });
+          };
+          console.log("[BOOK DEBUG] Case A: Creating new availability slot directly custom setDoc payload:", virtualSlotPayload);
+          await setDoc(slotRef, virtualSlotPayload);
         } else {
-          // If existing slot, update it
-          await updateDoc(slotRef, {
+          const updateSlotPayload = {
             isBooked: true,
             bookingId: bookingId
-          });
+          };
+          console.log("[BOOK DEBUG] Case B: Updating existing availability slot custom updateDoc payload:", updateSlotPayload);
+          await updateDoc(slotRef, updateSlotPayload);
         }
+        console.log("[BOOK DEBUG] Availability slot written/secured successfully.");
       } catch (err: any) {
+        console.error("[BOOK DEBUG] CRITICAL: Updating availability slot failed with error:", err);
         handleFirestoreError(err, OperationType.WRITE, `availability/${slotId}`);
       }
 
-      // 3. Contact backend to initialize Paystack transaction secure URL
-      const response = await fetch("/api/paystack/initialize", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          bookingId,
-          email: email.trim(),
-          amountType,
-          currency: paymentCurrency,
-        }),
-      });
+      // 3. Contact backend to initialize Flutterwave transaction secure URL
+      console.log("[BOOK DEBUG] Contacting server layer to compile and initialize secure checkout session...");
+      
+      // Constructing and logging local Flutterwave configuration object state for debugging
+      const flutterwaveConfig = {
+        publicKey: import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY || "Unavailable/Securely Managed Server-Side",
+        initializeEndpoint: "/api/flutterwave/initialize",
+        bookingId,
+        email: email.trim(),
+        fullName: fullName.trim(),
+        phone: phone.trim(),
+        amountType,
+        paymentCurrency,
+        totalAmountUSD: selectedService.price,
+        environment: import.meta.env.MODE || "development"
+      };
+      console.log("[BOOK DEBUG] Flutterwave Client Configuration Object:", flutterwaveConfig);
+
+      const requestPayload = {
+        bookingId,
+        email: email.trim(),
+        amountType,
+        currency: paymentCurrency,
+      };
+      console.log("[BOOK DEBUG] Launching API POST request to /api/flutterwave/initialize with body:", requestPayload);
+      
+      let response;
+      try {
+        response = await fetch("/api/flutterwave/initialize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestPayload),
+        });
+      } catch (fetchErr: any) {
+        console.error("[BOOK DEBUG] Network or Fetch Error during Flutterwave initialization:", fetchErr);
+        throw new Error(`Connection to billing server failed: ${fetchErr.message || fetchErr}`);
+      }
 
       const initData = await response.json();
+      console.log("[BOOK DEBUG] Server payment initialization response status is:", response.status, initData);
+      
       if (!response.ok || !initData.authorization_url) {
-        throw new Error(initData.error || "Failed on payment initialization.");
+        console.error("[BOOK DEBUG] FLUTTERWAVE INITIATION FAILED. Detailed Diagnostics:", {
+          httpStatus: response.status,
+          responseOk: response.ok,
+          responseBody: initData,
+          errorMessage: initData.error || initData.message || "Unknown error",
+          clientConfig: flutterwaveConfig
+        });
+        throw new Error(initData.error || initData.message || "Failed on payment initialization.");
       }
 
       // 4. Fire client-triggered admin-targeted notification
@@ -843,17 +916,25 @@ export default function Book() {
         createdAt: serverTimestamp(),
       };
 
+      console.log("[BOOK DEBUG] Registering client-to-admin notification item...", {
+        notificationId,
+        notificationPath: `notifications/${notificationId}`,
+        notificationData
+      });
       try {
         await setDoc(notificationRef, notificationData);
+        console.log("[BOOK DEBUG] Admin notification written successfully to Firestore.");
       } catch (err: any) {
+        console.error("[BOOK DEBUG] Non-blocking warning: Failed creating notification item:", err);
         handleFirestoreError(err, OperationType.WRITE, `notifications/${notificationId}`);
       }
 
-      // Redirect directly to Paystack payment gateway
+      console.log("[BOOK DEBUG] All transaction pre-requisites completed. Proceeding to checkout redirection URL:", initData.authorization_url);
+      // Redirect directly to Flutterwave payment gateway
       window.location.href = initData.authorization_url;
 
     } catch (err: any) {
-      console.error("Booking error:", err);
+      console.error("[BOOK DEBUG] CRITICAL: handleFinalBooking execution caught error:", err);
       setError(err.message || "An error occurred while compiling your booking records.");
       setIsSubmitting(false);
     }
@@ -1443,7 +1524,7 @@ export default function Book() {
               <div className="md:col-span-3 space-y-6">
                 <div>
                   <h3 className="text-xl font-display text-[#d4af37] mb-2">Secure Checkout</h3>
-                  <p className="text-white/40 text-xs">Choose deposit amount and local channel currency linked to Paystack ledger.</p>
+                  <p className="text-white/40 text-xs">Choose deposit amount and local channel currency linked to Flutterwave secure ledger.</p>
                 </div>
 
                 {/* Amount type toggle */}
@@ -1556,7 +1637,7 @@ export default function Book() {
                     onClick={handleFinalBooking}
                     className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold px-8"
                   >
-                    {isSubmitting ? "Redirecting to Paystack Secure Portal..." : "Proceed to Payment"}
+                    {isSubmitting ? "Redirecting to Flutterwave Secure Portal..." : "Proceed to Payment"}
                   </Button>
                 </div>
               </div>
@@ -1606,7 +1687,7 @@ export default function Book() {
 
                       {paymentCurrency !== "USD" && (
                         <div className="flex justify-between items-baseline border-t border-white/5 pt-2">
-                          <span className="text-xs uppercase tracking-widest text-[#d4af37]">Paystack Ledger</span>
+                          <span className="text-xs uppercase tracking-widest text-[#d4af37]">Flutterwave Ledger</span>
                           <span className="text-lg font-mono font-bold text-white">
                             {paymentCurrency === "GHS" 
                               ? `₵${(((selectedService?.price || 0) * (amountType === "deposit" ? 0.5 : 1.0)) * 15).toLocaleString()} GHS`

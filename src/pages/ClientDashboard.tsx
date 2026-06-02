@@ -71,6 +71,7 @@ interface PaymentRecord {
   currency: string;
   status: "pending" | "paid" | "failed" | "refunded";
   stripePaymentIntentId?: string;
+  flutterwaveReference?: string;
   paystackReference?: string;
   createdAt?: any;
 }
@@ -257,6 +258,7 @@ export default function ClientDashboard() {
           currency: data.currency || "USD",
           status: data.status || "paid",
           stripePaymentIntentId: data.stripePaymentIntentId || "",
+          flutterwaveReference: data.flutterwaveReference || "",
           paystackReference: data.paystackReference || "",
           createdAt: data.createdAt
         });
@@ -1079,7 +1081,7 @@ export default function ClientDashboard() {
                                   ${p.amount.toLocaleString()}.00
                                 </td>
                                 <td className="py-4 px-6 text-white/30">
-                                  {p.paystackReference || p.stripePaymentIntentId || "Direct Gate Reference"}
+                                  {p.flutterwaveReference || p.paystackReference || p.stripePaymentIntentId || "Direct Gate Reference"}
                                 </td>
                                 <td className="py-4 px-6">
                                   <span className="text-[8px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border bg-green-500/10 border-green-500/20 text-green-400">
@@ -1275,8 +1277,8 @@ export default function ClientDashboard() {
                 <div className="space-y-1.5">
                   <p className="text-white/40 uppercase font-bold tracking-widest text-[8px] print:text-black/50">Payment Gateway Status</p>
                   <p className="text-sm font-semibold text-green-400 font-mono uppercase">Verified Paid / Success</p>
-                  <p className="text-white/60 print:text-black/60">Checkout system checkout: Paystack</p>
-                  <p className="text-white/40 print:text-black/40 text-[9px]">Ref No: {selectedInvoice.paystackReference || "Direct Hook Registry"}</p>
+                  <p className="text-white/60 print:text-black/60">Checkout system: Flutterwave</p>
+                  <p className="text-white/40 print:text-black/40 text-[9px]">Ref No: {selectedInvoice.flutterwaveReference || selectedInvoice.paystackReference || "Direct Hook Registry"}</p>
                 </div>
               </div>
 

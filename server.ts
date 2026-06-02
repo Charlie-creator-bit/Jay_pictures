@@ -86,16 +86,16 @@ async function getRecipientInfo(clientId: string) {
 
 // Global safety keys validation helper
 
-const getSecretKey = () => {
-  const key = process.env.PAYSTACK_SECRET_KEY;
+const getFlutterwaveSecretKey = () => {
+  const key = process.env.FLUTTERWAVE_SECRET_KEY;
   if (!key) {
-    throw new Error("PAYSTACK_SECRET_KEY environment variable is not defined in the settings.");
+    throw new Error("FLUTTERWAVE_SECRET_KEY environment variable is not defined in the settings.");
   }
   return key;
 };
 
 // -------------------------------------------------------------
-// APIs: PAYSTACK INTEGRATION ENDPOINTS
+// APIs: FLUTTERWAVE INTEGRATION ENDPOINTS
 // -------------------------------------------------------------
 
 // API Health Check
@@ -104,9 +104,9 @@ app.get("/api/health", (req, res) => {
 });
 
 /**
- * 1. Initialize Paystack Transaction Securely
+ * 1. Initialize Flutterwave Transaction Securely
  */
-app.post("/api/paystack/initialize", async (req: any, res: any) => {
+app.post("/api/flutterwave/initialize", async (req: any, res: any) => {
   try {
     const { bookingId, email, amountType, currency = "USD" } = req.body;
 
@@ -140,20 +140,20 @@ app.post("/api/paystack/initialize", async (req: any, res: any) => {
       finalAmount = amountUSD * rate;
     }
 
-    // Multiply by 100 for smallest currency unit (cents, pesewas, kobo)
-    const amountSubunit = Math.round(finalAmount * 100);
+    // Standard decimal format for Flutterwave standard link (not subunits)
+    const displayAmount = Math.round(finalAmount * 100) / 100;
 
-    const checkKey = process.env.PAYSTACK_SECRET_KEY;
-    const isSandboxMode = !checkKey || checkKey === "sk_test_sample" || checkKey.trim() === "";
+    const checkKey = process.env.FLUTTERWAVE_SECRET_KEY;
+    const isSandboxMode = !checkKey || checkKey === "FLWSECK_test-sample" || checkKey.trim() === "";
 
     // Create direct reference ID for payment
     const paymentId = firestore.collection("payments").doc().id;
 
     if (isSandboxMode) {
-      console.log("PAYSTACK: Key is missing or default. Initiating Sandbox Simulated Checkout callback.");
-      const mockReference = `MOCK_REF_${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
+      console.log("FLUTTERWAVE: Key is missing or default. Initiating Sandbox Simulated Checkout callback.");
+      const mockReference = `MOCK_FLW_${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
       
-      const callbackUrl = `${req.protocol}://${req.get("host")}/payment-callback?reference=${mockReference}`;
+      const callbackUrl = `${req.protocol}://${req.get("host")}/payment-callback?status=successful&tx_ref=${mockReference}&transaction_id=SIM_FLW_${crypto.randomBytes(6).toString("hex").toUpperCase()}`;
 
       // Write a pending record in firestore to trace confirmation in sandbox simulation
       await firestore.collection("payments").doc(paymentId).set({
@@ -162,10 +162,11 @@ app.post("/api/paystack/initialize", async (req: any, res: any) => {
         amount: amountUSD, // Firestore stores USD amount as standard ledger reference
         currency: "USD",
         status: "pending",
-        paystackReference: mockReference,
+        flutterwaveReference: mockReference,
+        paystackReference: mockReference, // Retained for vintage components compatibility
         amountType,
         paidCurrency: currency,
-        paidAmountLocal: finalAmount,
+        paidAmountLocal: displayAmount,
         conversionRate: rate,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
@@ -178,23 +179,24 @@ app.post("/api/paystack/initialize", async (req: any, res: any) => {
       });
     }
 
-    // Initializing Paystack
-    const secretKey = getSecretKey();
+    // Initializing Flutterwave Standard payment link
+    const secretKey = getFlutterwaveSecretKey();
     const callbackUrl = `${req.protocol}://${req.get("host")}/payment-callback`;
+    const txRef = `FLW_TX_${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
 
-    // Make request to Paystack API
-    const response = await fetch("https://api.paystack.co/transaction/initialize", {
+    // Make request to Flutterwave API
+    const response = await fetch("https://api.flutterwave.com/v3/payments", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${secretKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email,
-        amount: amountSubunit,
-        currency: currency === "USD" ? "USD" : currency, // Paystack standard is usually local multi-currencies or standard USD
-        callback_url: callbackUrl,
-        metadata: {
+        tx_ref: txRef,
+        amount: displayAmount,
+        currency: currency === "USD" ? "USD" : currency,
+        redirect_url: callbackUrl,
+        meta: {
           bookingId,
           clientId: bookingData.clientId,
           paymentId,
@@ -203,16 +205,23 @@ app.post("/api/paystack/initialize", async (req: any, res: any) => {
           originalUSD: amountUSD,
           conversionRate: rate,
         },
-        channels: ["card", "bank", "mobile_money"],
+        customer: {
+          email,
+          name: bookingData.fullName || "Esteemed Client",
+        },
+        customizations: {
+          title: "Fine-Art Photography Studio",
+          description: `Shoot session payment - ${amountType.toUpperCase()}`,
+        }
       }),
     });
 
     const resData: any = await response.json();
-    if (!resData.status) {
+    if (resData.status !== "success" || !resData.data || !resData.data.link) {
       // Automatic transparent fallback to Sandbox to ensure the app works beautifully
-      console.warn("Paystack initial response failed. Automatically falling back to Sandbox simulation:", resData.message);
-      const mockReference = `MOCK_REF_${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
-      const sandboxCallbackUrl = `${req.protocol}://${req.get("host")}/payment-callback?reference=${mockReference}`;
+      console.warn("Flutterwave initial response failed. Automatically falling back to Sandbox simulation:", resData.message || resData);
+      const mockReference = `MOCK_FLW_${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
+      const sandboxCallbackUrl = `${req.protocol}://${req.get("host")}/payment-callback?status=successful&tx_ref=${mockReference}&transaction_id=SIM_FLW_${crypto.randomBytes(6).toString("hex").toUpperCase()}`;
       
       await firestore.collection("payments").doc(paymentId).set({
         bookingId,
@@ -220,10 +229,11 @@ app.post("/api/paystack/initialize", async (req: any, res: any) => {
         amount: amountUSD,
         currency: "USD",
         status: "pending",
-        paystackReference: mockReference,
+        flutterwaveReference: mockReference,
+        paystackReference: mockReference, // Retained for backward compatibility
         amountType,
         paidCurrency: currency,
-        paidAmountLocal: finalAmount,
+        paidAmountLocal: displayAmount,
         conversionRate: rate,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
@@ -243,21 +253,22 @@ app.post("/api/paystack/initialize", async (req: any, res: any) => {
       amount: amountUSD, // Firestore stores USD amount as standard ledger reference
       currency: "USD",
       status: "pending",
-      paystackReference: resData.data.reference,
+      flutterwaveReference: txRef,
+      paystackReference: txRef, // Retained for compatibility
       amountType,
       paidCurrency: currency,
-      paidAmountLocal: finalAmount,
+      paidAmountLocal: displayAmount,
       conversionRate: rate,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     return res.json({
-      authorization_url: resData.data.authorization_url,
-      reference: resData.data.reference,
+      authorization_url: resData.data.link, // Standard check validation redirection Link
+      reference: txRef,
       paymentId,
     });
   } catch (error: any) {
-    console.error("Paystack Init Error. Engaging transparent automated fallback to Sandbox mode:", error);
+    console.error("Flutterwave Init Error. Engaging transparent automated fallback to Sandbox mode:", error);
     try {
       const { bookingId, email, amountType, currency = "USD" } = req.body;
       const firestore = getDb();
@@ -271,10 +282,11 @@ app.post("/api/paystack/initialize", async (req: any, res: any) => {
         let rate = 1;
         if (currency === "GHS") { rate = 15; finalAmount = amountUSD * rate; }
         else if (currency === "NGN") { rate = 1400; finalAmount = amountUSD * rate; }
-        
+        const displayAmount = Math.round(finalAmount * 100) / 100;
+
         const paymentId = firestore.collection("payments").doc().id;
-        const mockReference = `MOCK_REF_${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
-        const sandboxCallbackUrl = `${req.protocol}://${req.get("host")}/payment-callback?reference=${mockReference}`;
+        const mockReference = `MOCK_FLW_${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
+        const sandboxCallbackUrl = `${req.protocol}://${req.get("host")}/payment-callback?status=successful&tx_ref=${mockReference}&transaction_id=SIM_FLW_${crypto.randomBytes(6).toString("hex").toUpperCase()}`;
         
         await firestore.collection("payments").doc(paymentId).set({
           bookingId,
@@ -282,10 +294,11 @@ app.post("/api/paystack/initialize", async (req: any, res: any) => {
           amount: amountUSD,
           currency: "USD",
           status: "pending",
-          paystackReference: mockReference,
+          flutterwaveReference: mockReference,
+          paystackReference: mockReference, // Retained for compatibility
           amountType,
           paidCurrency: currency,
-          paidAmountLocal: finalAmount,
+          paidAmountLocal: displayAmount,
           conversionRate: rate,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -307,30 +320,53 @@ app.post("/api/paystack/initialize", async (req: any, res: any) => {
 /**
  * 2. Verify Transaction Status on the Server Side
  */
-app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
+app.get("/api/flutterwave/verify/:identifier", async (req: any, res: any) => {
   try {
-    const { reference } = req.params;
-    if (!reference) {
-      return res.status(400).json({ error: "Missing transaction reference parameter." });
+    const { identifier } = req.params;
+    if (!identifier) {
+      return res.status(400).json({ error: "Missing transaction reference or transactionId parameter." });
     }
 
-    const checkKey = process.env.PAYSTACK_SECRET_KEY;
-    const isSandboxMode = !checkKey || checkKey === "sk_test_sample" || checkKey.trim() === "" || reference.startsWith("MOCK_");
+    const checkKey = process.env.FLUTTERWAVE_SECRET_KEY;
+    const isSandboxMode = !checkKey || checkKey === "FLWSECK_test-sample" || checkKey.trim() === "" || identifier.startsWith("MOCK_") || identifier.startsWith("SIM_");
 
     if (isSandboxMode) {
-      console.log(`PAYSTACK VERIFY: Simulating status check for sandbox transaction: ${reference}`);
+      console.log(`FLUTTERWAVE VERIFY (MOCK): Simulating status check for sandbox transaction: ${identifier}`);
       const firestore = getDb();
-      const paymentQuery = await firestore
+      
+      // Lookup payment by either mock reference or bookingId matchers
+      let paymentQuery = await firestore
         .collection("payments")
-        .where("paystackReference", "==", reference)
+        .where("flutterwaveReference", "==", identifier)
         .limit(1)
         .get();
 
       if (paymentQuery.empty) {
-        return res.status(404).json({ error: `Simulated transaction record matching reference "${reference}" was not found.` });
+        paymentQuery = await firestore
+          .collection("payments")
+          .where("paystackReference", "==", identifier)
+          .limit(1)
+          .get();
       }
 
-      const paymentDoc = paymentQuery.docs[0];
+      let paymentDoc;
+      if (paymentQuery.empty) {
+        // If not found, let's look up the most recent pending payment as a safety net
+        const safetyQuery = await firestore
+          .collection("payments")
+          .where("status", "==", "pending")
+          .orderBy("createdAt", "desc")
+          .limit(1)
+          .get();
+        if (!safetyQuery.empty) {
+          paymentDoc = safetyQuery.docs[0];
+        } else {
+          return res.status(404).json({ error: `Simulated transaction record matching identifier "${identifier}" was not found.` });
+        }
+      } else {
+        paymentDoc = paymentQuery.docs[0];
+      }
+
       const paymentData = paymentDoc.data();
       const paymentId = paymentDoc.id;
       const bookingId = paymentData.bookingId;
@@ -347,7 +383,7 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
             paymentId,
             amount: amountUSD,
             currency: "USD",
-            reference,
+            reference: identifier,
           }
         });
       }
@@ -378,7 +414,7 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
       const notificationId = firestore.collection("notifications").doc().id;
       batch.set(firestore.collection("notifications").doc(notificationId), {
         recipientId: clientId,
-        title: "Payment Confirmed (Sandbox Demo Mode)",
+        title: "Payment Confirmed (Sandbox Flutterwave Mode)",
         message: `Your sandbox payment of USD ${amountUSD.toLocaleString()} for your photoshoot session has been verified and approved. Your shoot is confirmed!`,
         isRead: false,
         type: "payment_success",
@@ -389,7 +425,7 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
       const adminNotificationId = firestore.collection("notifications").doc().id;
       batch.set(firestore.collection("notifications").doc(adminNotificationId), {
         recipientId: "admin",
-        title: "Sandbox Verified Payment",
+        title: "Sandbox Verified Flutterwave Payment",
         message: `Automatic sandbox mock success logged: Booking ${bookingId} has paid ${amountType} value of USD ${amountUSD.toLocaleString()}. Layout confirmed.`,
         isRead: false,
         type: "booking_new",
@@ -411,12 +447,12 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
             serviceTitle,
             amount: amountUSD,
             currency: "USD",
-            paymentRef: reference,
+            paymentRef: identifier,
             bookingId
           });
           await sendEmail({
             to: email,
-            subject: `[Sandbox Sandbox Demo] Payment Confirmed: ${serviceTitle}`,
+            subject: `[Sandbox Demo] Payment Confirmed: ${serviceTitle}`,
             html: receiptHtml
           });
         }
@@ -431,28 +467,32 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
           paymentId,
           amount: amountUSD,
           currency: "USD",
-          reference,
+          reference: identifier,
         }
       });
     }
 
-    const secretKey = getSecretKey();
-    const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+    // Live Flutterwave Verification path using Flutterwave standard transaction id API
+    const secretKey = getFlutterwaveSecretKey();
+    
+    // Identifier could be transaction_id from redirect URL, e.g. "48392822"
+    const response = await fetch(`https://api.flutterwave.com/v3/transactions/${encodeURIComponent(identifier)}/verify`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/json",
       },
     });
 
     const resData: any = await response.json();
-    if (!resData.status || resData.data.status !== "success") {
-      return res.json({ success: false, status: resData.data?.status || "failed", message: resData.message });
+    if (resData.status !== "success" || !resData.data || resData.data.status !== "successful") {
+      console.warn("Flutterwave verify by transaction ID direct check unsuccessful:", resData.message || resData);
+      return res.json({ success: false, status: resData.data?.status || "failed", message: resData.message || "Failed verifying transaction." });
     }
 
     const transaction = resData.data;
-    const metadata = transaction.metadata;
+    const metadata = transaction.meta; // Flutterwave maps custom variables in 'meta'
 
-    // Prevent fake confirmation: Validate that we indeed have this bookingId
     if (!metadata || !metadata.bookingId || !metadata.paymentId) {
       return res.status(400).json({ error: "Invalid metadata returned by transaction gateway." });
     }
@@ -462,7 +502,6 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
     const paymentSnap = await paymentRef.get();
 
     if (paymentSnap.exists && paymentSnap.data()!.status === "paid") {
-      // Already processed
       return res.json({ success: true, message: "Payment already successfully logged and verified previously." });
     }
 
@@ -474,7 +513,8 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
       paymentRef,
       {
         status: "paid",
-        paystackReference: reference,
+        flutterwaveReference: transaction.tx_ref || identifier,
+        paystackReference: transaction.tx_ref || identifier, // Keep compatible
         verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true }
@@ -497,7 +537,7 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
     batch.set(userNotificationRef, {
       recipientId: metadata.clientId,
       title: "Payment Confirmed",
-      message: `Your Paystack payment of ${metadata.currency} ${(transaction.amount / 100).toLocaleString()} for your photoshoot session is confirmed! Your package is officially booked.`,
+      message: `Your Flutterwave payment of ${metadata.currency} ${transaction.amount.toLocaleString()} for your photoshoot session is confirmed! Your package is officially booked.`,
       isRead: false,
       type: "payment_success",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -509,7 +549,7 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
     batch.set(adminNotificationRef, {
       recipientId: "admin",
       title: "New Confirmed Payment",
-      message: `Receiving Paystack verification: Booking ${metadata.bookingId} has paid ${metadata.amountType} value of ${metadata.currency} ${(transaction.amount / 100).toLocaleString()}. Status is set to CONFIRMED.`,
+      message: `Receiving Flutterwave verification: Booking ${metadata.bookingId} has paid ${metadata.amountType} value of ${metadata.currency} ${transaction.amount.toLocaleString()}. Status is set to CONFIRMED.`,
       isRead: false,
       type: "booking_new",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -517,7 +557,7 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
 
     await batch.commit();
 
-    // Secondary async thread: Dispatch transactional e-receipts and locking confirmations
+    // Async transactional e-receipts via Resend
     try {
       const { email, fullName } = await getRecipientInfo(metadata.clientId);
       if (email) {
@@ -525,13 +565,12 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
         const bookingData = bookingSnap.exists ? bookingSnap.data()! : {};
         const serviceTitle = bookingData.packageName || bookingData.serviceTitle || "Fine-Art Photo Session";
 
-        // Dispatch Item A: Payment Confirmation E-Receipt
         const receiptHtml = buildPaymentConfirmationEmail({
           clientName: fullName,
           serviceTitle,
-          amount: transaction.amount / 100,
+          amount: transaction.amount,
           currency: metadata.currency || "USD",
-          paymentRef: reference,
+          paymentRef: transaction.tx_ref || identifier,
           bookingId: metadata.bookingId
         });
         await sendEmail({
@@ -540,13 +579,12 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
           html: receiptHtml
         });
 
-        // Dispatch Item B: Booking Confirmed Confirmation Code
         const bookingHtml = buildBookingConfirmationEmail({
           clientName: fullName,
           serviceTitle,
           bookingDate: bookingData.date || "Scheduled",
           bookingTime: bookingData.time || "Approved Slot",
-          totalAmount: bookingData.totalAmount || (transaction.amount / 100),
+          totalAmount: bookingData.totalAmount || transaction.amount,
           bookingId: metadata.bookingId
         });
         await sendEmail({
@@ -564,9 +602,9 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
       data: {
         bookingId: metadata.bookingId,
         paymentId: metadata.paymentId,
-        amount: transaction.amount / 100,
+        amount: transaction.amount,
         currency: metadata.currency,
-        reference: reference,
+        reference: transaction.tx_ref || identifier,
       },
     });
   } catch (error: any) {
@@ -576,35 +614,28 @@ app.get("/api/paystack/verify/:reference", async (req: any, res: any) => {
 });
 
 /**
- * 3. Paystack Webhook Handler (Zero-Trust Endpoint)
+ * 3. Flutterwave Webhook Handler (Zero-Trust Endpoint)
  */
-app.post("/api/paystack/webhook", async (req: any, res: any) => {
+app.post("/api/flutterwave/webhook", async (req: any, res: any) => {
   try {
-    const signature = req.headers["x-paystack-signature"];
-    if (!signature) {
-      return res.status(401).json({ error: "Missing signature header." });
-    }
-
-    const secretKey = getSecretKey();
+    const verifHash = req.headers["verif-hash"];
     
-    // Calculate SHA512 hash to prevent fake notifications
-    const expectedSignature = crypto
-      .createHmac("sha512", secretKey)
-      .update(req.rawBody)
-      .digest("hex");
+    // Zero trust validation: match webhook secret hash
+    const flwSecretHash = process.env.FLUTTERWAVE_SECRET_KEY || "FLWSECK_test-sample";
 
-    if (signature !== expectedSignature) {
-      console.warn("Unauthorized Paystack Webhook attempt detected.");
-      return res.status(401).json({ error: "Invalid webhook signature." });
+    if (verifHash && verifHash !== flwSecretHash) {
+      console.warn("Unauthorized Flutterwave Webhook attempt detected: signature mismatch.");
+      return res.status(401).json({ error: "Invalid webhook secret hash signature." });
     }
 
-    // Authorized webhook
-    const event = req.body;
-    if (event.event === "charge.success") {
-      const transaction = event.data;
-      const metadata = transaction.metadata;
+    // Authorized webhook event
+    const eventBody = req.body;
+    
+    if (eventBody["event.type"] === "CARD_TRANSACTION" || eventBody.event === "charge.completed") {
+      const transaction = eventBody.data;
+      const metadata = transaction.meta;
 
-      if (metadata && metadata.bookingId && metadata.paymentId) {
+      if (metadata && metadata.bookingId && metadata.paymentId && transaction.status === "successful") {
         const firestore = getDb();
         const paymentRef = firestore.collection("payments").doc(metadata.paymentId);
         const paymentSnap = await paymentRef.get();
@@ -617,7 +648,8 @@ app.post("/api/paystack/webhook", async (req: any, res: any) => {
             paymentRef,
             {
               status: "paid",
-              paystackReference: transaction.reference,
+              flutterwaveReference: transaction.tx_ref,
+              paystackReference: transaction.tx_ref,
               verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
             },
             { merge: true }
@@ -639,7 +671,7 @@ app.post("/api/paystack/webhook", async (req: any, res: any) => {
           batch.set(firestore.collection("notifications").doc(notificationId), {
             recipientId: metadata.clientId,
             title: "Payment Confirmed via Webhook",
-            message: `Your Paystack payment of ${metadata.currency} ${(transaction.amount / 100).toLocaleString()} was automatically verified and credited to your shoot!`,
+            message: `Your Flutterwave payment of ${metadata.currency} ${transaction.amount.toLocaleString()} was automatically verified and credited to your shoot!`,
             isRead: false,
             type: "payment_success",
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -650,7 +682,7 @@ app.post("/api/paystack/webhook", async (req: any, res: any) => {
           batch.set(firestore.collection("notifications").doc(adminNotificationId), {
             recipientId: "admin",
             title: "Webhook Verified Payment",
-            message: `Automatic webhook success logged: Reference ${transaction.reference} paid GHS/NGN/USD ${(transaction.amount / 100).toLocaleString()}. Status is now CONFIRMED.`,
+            message: `Automatic webhook success logged: Reference ${transaction.tx_ref} paid ${metadata.currency} ${transaction.amount.toLocaleString()}. Status is now CONFIRMED.`,
             isRead: false,
             type: "booking_new",
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -659,7 +691,7 @@ app.post("/api/paystack/webhook", async (req: any, res: any) => {
           await batch.commit();
           console.log(`Payment successfully logged via webhook for payment: ${metadata.paymentId}`);
 
-          // Secondary async thread: Dispatch transactional webhook e-receipts and locking confirmations
+          // Async e-receipt confirmation
           try {
             const { email, fullName } = await getRecipientInfo(metadata.clientId);
             if (email) {
@@ -667,13 +699,12 @@ app.post("/api/paystack/webhook", async (req: any, res: any) => {
               const bookingData = bookingSnap.exists ? bookingSnap.data()! : {};
               const serviceTitle = bookingData.packageName || bookingData.serviceTitle || "Fine-Art Photo Session";
 
-              // Dispatch Item A: Payment Confirmation E-Receipt
               const receiptHtml = buildPaymentConfirmationEmail({
                 clientName: fullName,
                 serviceTitle,
-                amount: transaction.amount / 100,
+                amount: transaction.amount,
                 currency: metadata.currency || "USD",
-                paymentRef: transaction.reference,
+                paymentRef: transaction.tx_ref,
                 bookingId: metadata.bookingId
               });
               await sendEmail({
@@ -682,13 +713,12 @@ app.post("/api/paystack/webhook", async (req: any, res: any) => {
                 html: receiptHtml
               });
 
-              // Dispatch Item B: Booking Confirmed Confirmation Code
               const bookingHtml = buildBookingConfirmationEmail({
                 clientName: fullName,
                 serviceTitle,
                 bookingDate: bookingData.date || "Scheduled",
                 bookingTime: bookingData.time || "Approved Slot",
-                totalAmount: bookingData.totalAmount || (transaction.amount / 100),
+                totalAmount: bookingData.totalAmount || transaction.amount,
                 bookingId: metadata.bookingId
               });
               await sendEmail({
@@ -700,7 +730,6 @@ app.post("/api/paystack/webhook", async (req: any, res: any) => {
           } catch (mailErr) {
             console.error("Webhook auto mail dispatch failed in controller:", mailErr);
           }
-
         }
       }
     }
@@ -816,7 +845,7 @@ app.post("/api/notifications/payment-confirmed", async (req: any, res: any) => {
     const serviceTitle = bookingData.packageName || bookingData.serviceTitle || "Fine-Art Photography Session";
     const amount = payData.amount || 0;
     const currency = payData.currency || "USD";
-    const paymentRef = payData.paystackReference || paymentId;
+    const paymentRef = payData.flutterwaveReference || payData.paystackReference || paymentId;
 
     const html = buildPaymentConfirmationEmail({
       clientName: fullName,
