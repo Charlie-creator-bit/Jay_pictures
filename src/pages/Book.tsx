@@ -117,7 +117,7 @@ export default function Book() {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Flutterwave states
+  // Paystack states
   const [amountType, setAmountType] = useState<"deposit" | "full">("deposit");
   const [paymentCurrency, setPaymentCurrency] = useState<"USD" | "GHS" | "NGN">("USD");
 
@@ -850,58 +850,27 @@ export default function Book() {
         handleFirestoreError(err, OperationType.WRITE, `availability/${slotId}`);
       }
 
-      // 3. Contact backend to initialize Flutterwave transaction secure URL
+      // 3. Contact backend to initialize Paystack transaction secure URL
       console.log("[BOOK DEBUG] Contacting server layer to compile and initialize secure checkout session...");
-      
-      // Constructing and logging local Flutterwave configuration object state for debugging
-      const flutterwaveConfig = {
-        publicKey: import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY || "Unavailable/Securely Managed Server-Side",
-        initializeEndpoint: "/api/flutterwave/initialize",
-        bookingId,
-        email: email.trim(),
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        amountType,
-        paymentCurrency,
-        totalAmountUSD: selectedService.price,
-        environment: import.meta.env.MODE || "development"
-      };
-      console.log("[BOOK DEBUG] Flutterwave Client Configuration Object:", flutterwaveConfig);
-
       const requestPayload = {
         bookingId,
         email: email.trim(),
         amountType,
         currency: paymentCurrency,
       };
-      console.log("[BOOK DEBUG] Launching API POST request to /api/flutterwave/initialize with body:", requestPayload);
-      
-      let response;
-      try {
-        response = await fetch("/api/flutterwave/initialize", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestPayload),
-        });
-      } catch (fetchErr: any) {
-        console.error("[BOOK DEBUG] Network or Fetch Error during Flutterwave initialization:", fetchErr);
-        throw new Error(`Connection to billing server failed: ${fetchErr.message || fetchErr}`);
-      }
+      console.log("[BOOK DEBUG] Launching API POST request to /api/paystack/initialize with body:", requestPayload);
+      const response = await fetch("/api/paystack/initialize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestPayload),
+      });
 
       const initData = await response.json();
       console.log("[BOOK DEBUG] Server payment initialization response status is:", response.status, initData);
-      
       if (!response.ok || !initData.authorization_url) {
-        console.error("[BOOK DEBUG] FLUTTERWAVE INITIATION FAILED. Detailed Diagnostics:", {
-          httpStatus: response.status,
-          responseOk: response.ok,
-          responseBody: initData,
-          errorMessage: initData.error || initData.message || "Unknown error",
-          clientConfig: flutterwaveConfig
-        });
-        throw new Error(initData.error || initData.message || "Failed on payment initialization.");
+        throw new Error(initData.error || "Failed on payment initialization.");
       }
 
       // 4. Fire client-triggered admin-targeted notification
@@ -930,7 +899,7 @@ export default function Book() {
       }
 
       console.log("[BOOK DEBUG] All transaction pre-requisites completed. Proceeding to checkout redirection URL:", initData.authorization_url);
-      // Redirect directly to Flutterwave payment gateway
+      // Redirect directly to Paystack payment gateway
       window.location.href = initData.authorization_url;
 
     } catch (err: any) {
@@ -1524,7 +1493,7 @@ export default function Book() {
               <div className="md:col-span-3 space-y-6">
                 <div>
                   <h3 className="text-xl font-display text-[#d4af37] mb-2">Secure Checkout</h3>
-                  <p className="text-white/40 text-xs">Choose deposit amount and local channel currency linked to Flutterwave secure ledger.</p>
+                  <p className="text-white/40 text-xs">Choose deposit amount and local channel currency linked to Paystack ledger.</p>
                 </div>
 
                 {/* Amount type toggle */}
@@ -1637,7 +1606,7 @@ export default function Book() {
                     onClick={handleFinalBooking}
                     className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold px-8"
                   >
-                    {isSubmitting ? "Redirecting to Flutterwave Secure Portal..." : "Proceed to Payment"}
+                    {isSubmitting ? "Redirecting to Paystack Secure Portal..." : "Proceed to Payment"}
                   </Button>
                 </div>
               </div>
@@ -1687,7 +1656,7 @@ export default function Book() {
 
                       {paymentCurrency !== "USD" && (
                         <div className="flex justify-between items-baseline border-t border-white/5 pt-2">
-                          <span className="text-xs uppercase tracking-widest text-[#d4af37]">Flutterwave Ledger</span>
+                          <span className="text-xs uppercase tracking-widest text-[#d4af37]">Paystack Ledger</span>
                           <span className="text-lg font-mono font-bold text-white">
                             {paymentCurrency === "GHS" 
                               ? `₵${(((selectedService?.price || 0) * (amountType === "deposit" ? 0.5 : 1.0)) * 15).toLocaleString()} GHS`
