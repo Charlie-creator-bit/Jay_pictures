@@ -776,9 +776,9 @@ export default function ClientDashboard() {
                           <div className="text-right flex flex-col items-end">
                             <span className="text-[9px] font-mono uppercase tracking-widest text-white/40">Status Code</span>
                             <span className={`text-xs font-bold uppercase font-mono mt-1 ${
-                              soonestBooking.status === "confirmed" ? "text-green-400" : "text-amber-400 animate-pulse"
+                              (soonestBooking.status === "confirmed" || soonestBooking.status === "completed") ? "text-green-400" : "text-amber-400 animate-pulse"
                             }`}>
-                              ● {soonestBooking.status}
+                              ● {(soonestBooking.status === "confirmed" || soonestBooking.status === "completed") ? "Confirmed" : "Pending"}
                             </span>
                           </div>
                         </div>
@@ -866,15 +866,11 @@ export default function ClientDashboard() {
                             <div className="space-y-1">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`text-[8px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border ${
-                                  b.status === "confirmed" 
+                                  (b.status === "confirmed" || b.status === "completed") 
                                     ? "bg-green-500/10 border-green-500/20 text-green-400"
-                                    : b.status === "completed"
-                                      ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
-                                      : b.status === "cancelled"
-                                        ? "bg-red-500/10 border-red-500/20 text-red-400"
-                                        : "bg-yellow-500/10 border-yellow-500/20 text-yellow-500"
+                                    : "bg-yellow-500/10 border-yellow-500/20 text-yellow-500"
                                 }`}>
-                                  {b.status}
+                                  {(b.status === "confirmed" || b.status === "completed") ? "Confirmed" : "Pending"}
                                 </span>
                                 <span className="text-[9px] font-mono text-white/20">Ref: {b.id.slice(0, 10).toUpperCase()}</span>
                               </div>

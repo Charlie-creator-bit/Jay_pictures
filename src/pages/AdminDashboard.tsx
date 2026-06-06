@@ -732,6 +732,43 @@ export default function AdminDashboard() {
     }
   };
 
+  // Mark a specific offline collection item as completely paid
+  const handleMarkPaymentPaid = async (paymentId: string, bookingId: string) => {
+    setDbStatusMsg(null);
+    try {
+      // 1. Update Payment record to paid in Firestore
+      const paymentRef = doc(db, "payments", paymentId);
+      await updateDoc(paymentRef, {
+        status: "paid",
+        verifiedAt: serverTimestamp()
+      });
+
+      // 2. Also automatically transition booking status to confirmed if it is pending!
+      if (bookingId && bookingId !== "N/A") {
+        const bookingRef = doc(db, "bookings", bookingId);
+        const bookingSnap = await getDoc(bookingRef);
+        if (bookingSnap.exists() && bookingSnap.data().status === "pending") {
+          await updateDoc(bookingRef, {
+            status: "confirmed",
+            updatedAt: serverTimestamp()
+          });
+          
+          // Trigger email notification automatically via Resend backend!
+          fetch("/api/notifications/booking-confirmed", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ bookingId })
+          }).catch(err => console.error("Background booking confirmation dispatch failed:", err));
+        }
+      }
+
+      setDbStatusMsg({ type: "success", text: "Transaction successfully approved and updated." });
+      fetchAllData();
+    } catch (err: any) {
+      setDbStatusMsg({ type: "error", text: "Failed approving transaction: " + err.message });
+    }
+  };
+
 
   // Manage timeslot manually (Block/Unblock)
   const handleToggleTimeslotManual = async (slotId: string, currentBooked: boolean) => {
@@ -1939,11 +1976,11 @@ export default function AdminDashboard() {
                         <thead>
                           <tr className="border-b border-white/5 text-white/40 uppercase font-bold text-[9px] tracking-widest">
                             <th className="py-4 px-6">Payment Ledger ID</th>
-                            <th className="py-4 px-6">Paystack Reference</th>
+                            <th className="py-4 px-6">Billing Reference</th>
                             <th className="py-4 px-6">Amount USD</th>
-                            <th className="py-4 px-6">Local Paid Rate</th>
-                            <th className="py-4 px-6">Ratio type</th>
+                            <th className="py-4 px-6">Local Rate</th>
                             <th className="py-4 px-6">Status</th>
+                            <th className="py-4 px-6 text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5 font-mono text-[11px] text-white/80">
@@ -1958,19 +1995,16 @@ export default function AdminDashboard() {
                               return (
                                 <tr key={p.id} className="hover:bg-white/[0.01] transition-colors">
                                   <td className="py-4 px-6 font-bold text-white">
-                                    {p.id}
+                                    {p.id.slice(0, 10).toUpperCase()}...
                                   </td>
                                   <td className="py-4 px-6 text-white/50 break-words max-w-[150px]">
-                                    {p.paystackReference || <span className="text-red-400">pi_offline_mock</span>}
+                                    {p.paystackReference || <span className="text-white/30 text-[10px]">Direct Office billing</span>}
                                   </td>
                                   <td className="py-4 px-6 font-semibold text-white">
                                     ${p.amount.toLocaleString()} USD
                                   </td>
                                   <td className="py-4 px-6 text-luxury-gold">
                                     {p.paidAmountLocal ? `${p.paidAmountLocal.toLocaleString()} ${p.paidCurrency}` : `$${p.amount.toLocaleString()} USD`}
-                                  </td>
-                                  <td className="py-4 px-6 uppercase text-[10px]">
-                                    {p.amountType === "deposit" ? "50% Deposit" : "100% Full Payment"}
                                   </td>
                                   <td className="py-4 px-6">
                                     <span className={`text-[8px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border ${
@@ -1982,6 +2016,16 @@ export default function AdminDashboard() {
                                     }`}>
                                       {p.status}
                                     </span>
+                                  </td>
+                                  <td className="py-4 px-6 text-right">
+                                    {p.status === "pending" && (
+                                      <button
+                                        onClick={() => handleMarkPaymentPaid(p.id, p.bookingId)}
+                                        className="px-2.5 py-1 bg-[#d4af37]/10 hover:bg-[#d4af37]/25 text-[#d4af37] border border-[#d4af37]/30 text-[9px] font-mono uppercase tracking-widest rounded transition-all cursor-pointer inline-flex items-center gap-1"
+                                      >
+                                        <Check className="w-3 h-3" /> Mark paid
+                                      </button>
+                                    )}
                                   </td>
                                 </tr>
                               );

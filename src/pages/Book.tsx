@@ -850,27 +850,24 @@ export default function Book() {
         handleFirestoreError(err, OperationType.WRITE, `availability/${slotId}`);
       }
 
-      // 3. Contact backend to initialize Paystack transaction secure URL
-      console.log("[BOOK DEBUG] Contacting server layer to compile and initialize secure checkout session...");
-      const requestPayload = {
-        bookingId,
-        email: email.trim(),
-        amountType,
-        currency: paymentCurrency,
+      // 3. Create a pending payment record inside the payments collection to record the transaction
+      const paymentId = doc(collection(db, "payments")).id;
+      const paymentRef = doc(db, "payments", paymentId);
+      const paymentData = {
+        bookingId: bookingId,
+        clientId: activeUser.uid,
+        amount: selectedService.price,
+        currency: "USD",
+        status: "pending",
+        createdAt: serverTimestamp(),
       };
-      console.log("[BOOK DEBUG] Launching API POST request to /api/paystack/initialize with body:", requestPayload);
-      const response = await fetch("/api/paystack/initialize", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestPayload),
-      });
 
-      const initData = await response.json();
-      console.log("[BOOK DEBUG] Server payment initialization response status is:", response.status, initData);
-      if (!response.ok || !initData.authorization_url) {
-        throw new Error(initData.error || "Failed on payment initialization.");
+      console.log("[BOOK DEBUG] Submitting payments record setDoc payload:", paymentData);
+      try {
+        await setDoc(paymentRef, paymentData);
+        console.log("[BOOK DEBUG] Payment document created successfully in Firestore.");
+      } catch (err: any) {
+        console.error("[BOOK DEBUG] Failed saving payment document:", err);
       }
 
       // 4. Fire client-triggered admin-targeted notification
@@ -878,8 +875,8 @@ export default function Book() {
       const notificationRef = doc(db, "notifications", notificationId);
       const notificationData = {
         recipientId: "admin",
-        title: "Booking Initialized",
-        message: `${fullName} initialized a ${amountType} transaction (${paymentCurrency}) for ${selectedService.title}.`,
+        title: "New Booking Created",
+        message: `${fullName} booked a slot for ${selectedService.title}. Booking request is pending confirmation.`,
         isRead: false,
         type: "booking_new",
         createdAt: serverTimestamp(),
@@ -895,12 +892,13 @@ export default function Book() {
         console.log("[BOOK DEBUG] Admin notification written successfully to Firestore.");
       } catch (err: any) {
         console.error("[BOOK DEBUG] Non-blocking warning: Failed creating notification item:", err);
-        handleFirestoreError(err, OperationType.WRITE, `notifications/${notificationId}`);
       }
 
-      console.log("[BOOK DEBUG] All transaction pre-requisites completed. Proceeding to checkout redirection URL:", initData.authorization_url);
-      // Redirect directly to Paystack payment gateway
-      window.location.href = initData.authorization_url;
+      console.log("[BOOK DEBUG] All checkout pre-requisites completed successfully. Transitioning to confirmation final state.");
+      setCreatedBookingId(bookingId);
+      setCreatedPaymentId(paymentId);
+      setIsSubmitting(false);
+      setStep(5);
 
     } catch (err: any) {
       console.error("[BOOK DEBUG] CRITICAL: handleFinalBooking execution caught error:", err);
@@ -1471,7 +1469,7 @@ export default function Book() {
                       onClick={() => setStep(4)}
                       className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold"
                     >
-                      Continue to checkout <ChevronRight className="w-4 h-4" />
+                      Continue to review <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
                 </>
@@ -1479,7 +1477,7 @@ export default function Book() {
             </motion.div>
           )}
 
-          {/* Step 4: Checkout & Ledger Payment */}
+          {/* Step 4: Checkout & Booking Review */}
           {step === 4 && (
             <motion.div
               key="step4"
@@ -1489,102 +1487,36 @@ export default function Book() {
               className="grid grid-cols-1 md:grid-cols-5 gap-8"
             >
               
-              {/* Payment settings sheet */}
+              {/* Review details sheet */}
               <div className="md:col-span-3 space-y-6">
                 <div>
-                  <h3 className="text-xl font-display text-[#d4af37] mb-2">Secure Checkout</h3>
-                  <p className="text-white/40 text-xs">Choose deposit amount and local channel currency linked to Paystack ledger.</p>
+                  <h3 className="text-xl font-display text-[#d4af37] mb-2">Review Booking Details</h3>
+                  <p className="text-white/40 text-xs">Verify your registered details to lock in your session reservation.</p>
                 </div>
 
-                {/* Amount type toggle */}
-                <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 space-y-4">
-                  <span className="text-[10px] uppercase tracking-widest text-[#d4af37] font-bold block">1. Payment Pledge Split</span>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setAmountType("deposit")}
-                      disabled={isSubmitting}
-                      className={`p-4 border rounded-xl text-left transition-all ${
-                        amountType === "deposit"
-                          ? "border-luxury-gold bg-luxury-gold/5 text-white"
-                          : "border-white/10 hover:border-white/20 text-white/60 bg-transparent"
-                      }`}
-                    >
-                      <p className="text-xs font-bold uppercase tracking-wider">50% Deposit</p>
-                      <p className="text-[10.5px] text-white/50 focus:text-white mt-1">Pay half now to lock slot, balance due pre-shoot.</p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setAmountType("full")}
-                      disabled={isSubmitting}
-                      className={`p-4 border rounded-xl text-left transition-all ${
-                        amountType === "full"
-                          ? "border-luxury-gold bg-luxury-gold/5 text-white"
-                          : "border-white/10 hover:border-white/20 text-white/60 bg-transparent"
-                      }`}
-                    >
-                      <p className="text-xs font-bold uppercase tracking-wider">Full Payment</p>
-                      <p className="text-[10.5px] text-white/50 focus:text-white mt-1">Settle 100% of the session package today.</p>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Local Currency Selector */}
-                <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 space-y-4">
-                  <span className="text-[10px] uppercase tracking-widest text-[#d4af37] font-bold block">2. Gateway Currency Channel</span>
-                  <div className="grid grid-cols-3 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentCurrency("USD")}
-                      disabled={isSubmitting}
-                      className={`p-3 border rounded-xl text-center transition-all ${
-                        paymentCurrency === "USD"
-                          ? "border-luxury-gold bg-luxury-gold/5 text-white"
-                          : "border-white/10 hover:border-white/20 text-white/60 bg-transparent"
-                      }`}
-                    >
-                      <p className="text-sm font-bold tracking-widest">USD ($)</p>
-                      <p className="text-[9px] text-white/40 mt-1">Visa / Mastercard</p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentCurrency("GHS")}
-                      disabled={isSubmitting}
-                      className={`p-3 border rounded-xl text-center transition-all ${
-                        paymentCurrency === "GHS"
-                          ? "border-luxury-gold bg-luxury-gold/5 text-white"
-                          : "border-white/10 hover:border-white/20 text-white/60 bg-transparent"
-                      }`}
-                    >
-                      <p className="text-sm font-bold tracking-widest">GHS (₵)</p>
-                      <p className="text-[9px] text-white/40 mt-1">MTN MoMo & Cards</p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentCurrency("NGN")}
-                      disabled={isSubmitting}
-                      className={`p-3 border rounded-xl text-center transition-all ${
-                        paymentCurrency === "NGN"
-                          ? "border-luxury-gold bg-luxury-gold/5 text-white"
-                          : "border-white/10 hover:border-white/20 text-white/60 bg-transparent"
-                      }`}
-                    >
-                      <p className="text-sm font-bold tracking-widest">NGN (₦)</p>
-                      <p className="text-[9px] text-white/40 mt-1">Cards / Bank Pay</p>
-                    </button>
+                {/* Info summary display */}
+                <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 space-y-4 font-sans">
+                  <span className="text-[10px] uppercase tracking-widest text-[#d4af37] font-bold block">1. Customer Information</span>
+                  <div className="space-y-2 text-sm text-white/80">
+                    <p><span className="text-white/40 font-mono text-[11px] inline-block w-24">Full Name:</span> {fullName}</p>
+                    <p><span className="text-white/40 font-mono text-[11px] inline-block w-24">Email Path:</span> {email}</p>
+                    <p><span className="text-white/40 font-mono text-[11px] inline-block w-24">Phone Line:</span> {phone}</p>
+                    {notes.trim() && (
+                      <div className="mt-3 pt-3 border-t border-white/5">
+                        <span className="text-white/40 font-mono text-[11px] block mb-1">Session Vision:</span>
+                        <p className="text-xs bg-white/5 p-3 rounded-lg text-white/70 italic leading-relaxed">{notes}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Terms and conditions agreement note */}
                 <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 space-y-3 font-mono text-[10.5px]">
-                  <p className="text-[#d4af37] font-bold uppercase tracking-wider">Booking Terms &amp; Policies</p>
+                  <p className="text-[#d4af37] font-bold uppercase tracking-wider">Booking Heritage Policies</p>
                   <ul className="space-y-1.5 text-white/50 text-left list-decimal list-inside leading-relaxed">
-                    <li>Events outside Accra require client-funded transportation and accommodation.</li>
-                    <li>Make a secure 50% deposit now to reserve and lock in your session slot.</li>
-                    <li>The remaining 50% balance is payable on or before your scheduled event date.</li>
+                    <li>Events outside Accra require client-arranged transportation or accommodation coordination.</li>
+                    <li>Payment settlements are coordinated directly offline with the visual director.</li>
+                    <li>Any rescheduling requests must be submitted at least 48 hours prior to the session.</li>
                   </ul>
                   <label className="flex items-start gap-2 pt-1 cursor-pointer select-none">
                     <input 
@@ -1604,9 +1536,9 @@ export default function Book() {
                   <Button 
                     disabled={isSubmitting || !selectedService}
                     onClick={handleFinalBooking}
-                    className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold px-8"
+                    className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold px-8 cursor-pointer"
                   >
-                    {isSubmitting ? "Redirecting to Paystack Secure Portal..." : "Proceed to Payment"}
+                    {isSubmitting ? "Processing Reservation..." : "Confirm Reservation"}
                   </Button>
                 </div>
               </div>
@@ -1636,40 +1568,16 @@ export default function Book() {
                       </div>
                     </div>
 
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-white/40 block">Client name</span>
-                      <span className="text-xs text-white">{fullName}</span>
-                    </div>
-
-                    <div className="border-t border-white/5 pt-3">
-                      <span className="text-[10px] uppercase tracking-wider text-white/40 block">Selected Ratio</span>
-                      <span className="text-xs text-white capitalize">{amountType} Payment ({(amountType === "deposit" ? 0.5 : 1.0) * 100}%)</span>
-                    </div>
-
                     <div className="border-t border-[#d4af37]/20 pt-4 space-y-2">
                       <div className="flex justify-between items-baseline">
-                        <span className="text-xs uppercase tracking-widest text-[#d4af37]">Final Total USD</span>
+                        <span className="text-xs uppercase tracking-widest text-[#d4af37]">Total Value</span>
                         <span className="text-lg font-display font-bold text-white">
-                          ${((selectedService?.price || 0) * (amountType === "deposit" ? 0.5 : 1.0)).toLocaleString()}
+                          ${selectedService?.price.toLocaleString()} USD
                         </span>
                       </div>
-
-                      {paymentCurrency !== "USD" && (
-                        <div className="flex justify-between items-baseline border-t border-white/5 pt-2">
-                          <span className="text-xs uppercase tracking-widest text-[#d4af37]">Paystack Ledger</span>
-                          <span className="text-lg font-mono font-bold text-white">
-                            {paymentCurrency === "GHS" 
-                              ? `₵${(((selectedService?.price || 0) * (amountType === "deposit" ? 0.5 : 1.0)) * 15).toLocaleString()} GHS`
-                              : `₦${(((selectedService?.price || 0) * (amountType === "deposit" ? 0.5 : 1.0)) * 1400).toLocaleString()} NGN`
-                            }
-                          </span>
-                        </div>
-                      )}
-                      
-                      <div className="text-[9px] text-white/30 italic mt-1 leading-relaxed">
-                        {paymentCurrency === "GHS" && "* Calculated using our standard rate of 1 USD = 15 GHS for local MoMo processing channels."}
-                        {paymentCurrency === "NGN" && "* Calculated using our standard rate of 1 USD = 1,400 NGN for local Bank transfer networks."}
-                      </div>
+                      <p className="text-[11px] text-white/40 italic leading-snug">
+                        * No upfront online deposit is required to secure this booking. Standard billing will be arranged directly.
+                      </p>
                     </div>
                   </div>
                 </GlassCard>
