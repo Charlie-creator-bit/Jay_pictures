@@ -1,9 +1,10 @@
-{"projectId": "gen-lang-client-0036447480",
-  "appId": "1:985258175030:web:e089e4791c496d3c988697",
-  "apiKey": "AIzaSyD_MBoBHaTDrkjAgf1VbU2RaoNmfBeP6Ds",
-  "authDomain": "gen-lang-client-0036447480.firebaseapp.com",
+{
+  "projectId": "true-triumph-f8gvj",
+  "appId": "1:781842441118:web:e4bad48acd2df686cf6c8f",
+  "apiKey": "AIzaSyAE5XmsZjl9i4Ol9C2GUqZDaWYjYDnKpGU",
+  "authDomain": "true-triumph-f8gvj.firebaseapp.com",
   "firestoreDatabaseId": "ai-studio-79e51ffe-5a91-4e86-bedf-ed0236f88a77",
-  "storageBucket": "gen-lang-client-0036447480.firebasestorage.app",
-  "messagingSenderId": "985258175030",
+  "storageBucket": "true-triumph-f8gvj.firebasestorage.app",
+  "messagingSenderId": "781842441118",
   "measurementId": ""
 }
