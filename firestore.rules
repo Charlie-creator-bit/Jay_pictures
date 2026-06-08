@@ -17,15 +17,16 @@ service cloud.firestore {
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
     }
 
     function isAdmin() {
       return isSignedIn() && (
-        (request.auth.token.email_verified == true && (
-          request.auth.token.email.toLowerCase() == 'charlesadu3112@gmail.com' ||
-          request.auth.token.email.toLowerCase() == 'admin@jaypictures.com'
-        )) || (
+        (request.auth.token.keys().hasAll(['email', 'email_verified']) &&
+         request.auth.token.email_verified == true && (
+           request.auth.token.email.toLowerCase() == 'charlesadu3112@gmail.com' ||
+           request.auth.token.email.toLowerCase() == 'admin@jaypictures.com'
+         )) || (
           exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
         )
@@ -137,7 +138,13 @@ service cloud.firestore {
       allow list: if isAdmin(); // Users should not blanket read profiles
       
       allow create: if isSignedIn() && isValidId(userId) && (
-        (isOwner(userId) && isValidUser(incoming()) && incoming().createdAt == request.time && (incoming().role == 'client' || incoming().role == 'admin')) ||
+        (isOwner(userId) && isValidUser(incoming()) && incoming().createdAt == request.time && (
+          incoming().role == 'client' ||
+          (incoming().role == 'admin' && request.auth.token.keys().hasAll(['email']) && (
+            request.auth.token.email.toLowerCase() == 'charlesadu3112@gmail.com' ||
+            request.auth.token.email.toLowerCase() == 'admin@jaypictures.com'
+          ))
+        )) ||
         isAdmin()
       );
       

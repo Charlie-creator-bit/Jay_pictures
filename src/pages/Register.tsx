@@ -35,12 +35,16 @@ export default function Register() {
     try {
       const { user } = await createUserWithEmailAndPassword(auth, data.email, data.password);
       
-      // Create user document in Firestore with role as client
+      // Create user document in Firestore with role as client or admin (for bootstrapped admin emails)
       try {
+        const isAdminEmail = 
+          data.email.toLowerCase() === "charlesadu3112@gmail.com" || 
+          data.email.toLowerCase() === "admin@jaypictures.com";
+
         await setDoc(doc(db, "users", user.uid), {
           fullName: data.fullName,
           email: data.email,
-          role: "client",
+          role: isAdminEmail ? "admin" : "client",
           createdAt: serverTimestamp(),
         });
       } catch (dbErr: any) {
