@@ -59,6 +59,8 @@ export default function Login() {
         msg = "Google login pop-up was blocked. Pop-ups are blocked by browsers when running inside an embedded preview iframe. To sign in with Google, please open this app in a new browser tab using the external arrow button at the top right of the screen, or sign in using your Email/Password above.";
       } else if (err.code === "auth/popup-closed-by-user" || msg.includes("popup-closed-by-user")) {
         msg = "The authentication pop-up was closed before completion. Please try again and complete the Google login prompt.";
+      } else if (err.code === "auth/account-exists-with-different-credential" || msg.includes("account-exists-with-different-credential")) {
+        msg = "An account already exists with this email address under a different sign-in method (Email/Password). Please log in using your Email and Password above. (Note: System administrators can allow both methods on the same email by toggling 'Allow creation of multiple accounts with the same email' under Firebase Console > Authentication > Settings).";
       }
       setError(msg);
     }

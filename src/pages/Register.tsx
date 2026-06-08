@@ -51,7 +51,7 @@ export default function Register() {
     } catch (err: any) {
       let msg = err.message || "Registration failed";
       if (err.code === "auth/email-already-in-use") {
-        msg = "This email address is already registered. If you already have an account, please click 'Sign In' below to log in.";
+        msg = "This email address is already registered. If you signed in previously using Google, please go to the Sign In page and sign in with Google. If not, please click 'Sign In' below to log in with your email/password or use a different email.";
       } else if (err.code === "auth/weak-password") {
         msg = "The password is too weak. Please use a password with at least 6 characters.";
       } else if (err.code === "auth/invalid-email") {
