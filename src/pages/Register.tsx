@@ -39,7 +39,8 @@ export default function Register() {
       try {
         const isAdminEmail = 
           data.email.toLowerCase() === "charlesadu3112@gmail.com" || 
-          data.email.toLowerCase() === "admin@jaypictures.com";
+          data.email.toLowerCase() === "admin@jaypictures.com" ||
+          data.email.toLowerCase() === "asarearthur442@gmail.com";
 
         await setDoc(doc(db, "users", user.uid), {
           fullName: data.fullName,

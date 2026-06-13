@@ -36,7 +36,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         const ADMIN_EMAILS = [
           "charlesadu3112@gmail.com",
-          "admin@jaypictures.com"
+          "admin@jaypictures.com",
+          "asarearthur442@gmail.com"
         ];
         
         const userEmail = currentUser.email?.toLowerCase();

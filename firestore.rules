@@ -17,15 +17,15 @@ service cloud.firestore {
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
+      return id is string && id.size() > 0 && id.size() <= 128;
     }
 
     function isAdmin() {
       return isSignedIn() && (
-        (request.auth.token.keys().hasAll(['email', 'email_verified']) &&
-         request.auth.token.email_verified == true && (
+        (request.auth.token.keys().hasAll(['email']) && (
            request.auth.token.email.toLowerCase() == 'charlesadu3112@gmail.com' ||
-           request.auth.token.email.toLowerCase() == 'admin@jaypictures.com'
+           request.auth.token.email.toLowerCase() == 'admin@jaypictures.com' ||
+           request.auth.token.email.toLowerCase() == 'asarearthur442@gmail.com'
          )) || (
           exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
@@ -45,11 +45,14 @@ service cloud.firestore {
 
     function isValidUser(data) {
       return data.keys().hasAll(['fullName', 'email', 'role', 'createdAt']) &&
-             (data.keys().size() == 4 || (data.keys().size() == 5 && data.keys().hasAll(['phone']))) &&
              data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 200 &&
              data.email is string && data.email.size() > 0 && data.email.size() <= 200 &&
+             (data.role == 'admin' || data.role == 'client') &&
              (!data.keys().hasAll(['phone']) || (data.phone is string && data.phone.size() <= 50)) &&
-             (data.role == 'admin' || data.role == 'client');
+             (!data.keys().hasAll(['phoneNumber']) || (data.phoneNumber is string && data.phoneNumber.size() <= 50)) &&
+             (!data.keys().hasAll(['themePreference']) || (data.themePreference is string && data.themePreference.size() <= 100)) &&
+             (!data.keys().hasAll(['creativeNotes']) || (data.creativeNotes is string && data.creativeNotes.size() <= 2000)) &&
+             (!data.keys().hasAll(['updatedAt']) || data.updatedAt is timestamp);
     }
 
     function isValidService(data) {
@@ -142,7 +145,8 @@ service cloud.firestore {
           incoming().role == 'client' ||
           (incoming().role == 'admin' && request.auth.token.keys().hasAll(['email']) && (
             request.auth.token.email.toLowerCase() == 'charlesadu3112@gmail.com' ||
-            request.auth.token.email.toLowerCase() == 'admin@jaypictures.com'
+            request.auth.token.email.toLowerCase() == 'admin@jaypictures.com' ||
+            request.auth.token.email.toLowerCase() == 'asarearthur442@gmail.com'
           ))
         )) ||
         isAdmin()
@@ -151,9 +155,9 @@ service cloud.firestore {
       allow update: if isSignedIn() && isValidId(userId) && (
         isAdmin() ||
         (isOwner(userId) && isValidUser(incoming()) &&
-         incoming().role == existing().role &&
-         incoming().createdAt == existing().createdAt && (
-           incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'email', 'phone'])
+         incoming().role == existing().get('role', 'client') &&
+         incoming().createdAt == existing().get('createdAt', request.time) && (
+           incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'email', 'phone', 'phoneNumber', 'themePreference', 'creativeNotes', 'updatedAt'])
          )
         )
       );
