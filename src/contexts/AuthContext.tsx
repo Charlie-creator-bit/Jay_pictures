@@ -42,10 +42,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const userEmail = currentUser.email?.toLowerCase();
         const isAdminEmail = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
+        const isDbAdmin = !!(userDoc && userDoc.exists() && userDoc.data().role === "admin");
 
-        if (isAdminEmail) {
+        if (isAdminEmail || isDbAdmin) {
           setRole("admin");
-          if (!currentUser.isAnonymous) {
+          if (!currentUser.isAnonymous && isAdminEmail && (!userDoc || !userDoc.exists() || userDoc.data().role !== "admin")) {
             try {
               await setDoc(doc(db, "users", currentUser.uid), {
                 fullName: currentUser.displayName || "Owner / Admin",
@@ -59,14 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else {
           setRole("client");
-          // If Firestore says admin but their email is not an authorized Admin email, demote them!
-          if (userDoc && userDoc.exists() && userDoc.data().role === "admin") {
-            try {
-              await setDoc(doc(db, "users", currentUser.uid), { role: "client" }, { merge: true });
-            } catch (err) {
-              console.warn("Demoting unauthorized admin in database:", err);
-            }
-          } else if (!currentUser.isAnonymous && (!userDoc || !userDoc.exists())) {
+          if (!currentUser.isAnonymous && (!userDoc || !userDoc.exists())) {
             // Provision as a client
             try {
               await setDoc(doc(db, "users", currentUser.uid), {
