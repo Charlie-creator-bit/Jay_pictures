@@ -170,6 +170,12 @@ export default function ClientDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const getFirstName = (fullName?: string) => {
+    if (!fullName) return "there";
+    const parts = fullName.trim().split(/\s+/);
+    return parts[0];
+  };
+
   // Core collections data
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -495,11 +501,11 @@ export default function ClientDashboard() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2">
             <span className="text-[10px] uppercase tracking-[0.3em] font-mono text-luxury-gold font-bold">Patron Workspace</span>
-            <h1 className="text-3xl sm:text-4xl font-display">
-              Welcome, <span className="italic font-serif text-[#d4af37]">{profile.fullName || "Esteemed Client"}</span>
+            <h1 className="text-3xl sm:text-4xl font-display text-white">
+              Hey <span className="italic font-serif text-[#d4af37]">{getFirstName(profile.fullName)}</span>! 👋
             </h1>
             <p className="text-xs text-white/45 max-w-lg">
-              Manage custom photoshoot schedules, fine-tune creative guidelines in your personal moodboard, and view exquisite heirloom photography.
+              Hope you are having a wonderful day! Here you can schedule a shoot, fine-tune your aesthetic board, or explore your delivered pictures.
             </p>
           </div>
           
