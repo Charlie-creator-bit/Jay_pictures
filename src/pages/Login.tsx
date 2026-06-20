@@ -33,33 +33,6 @@ export default function Login() {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       navigate("/");
     } catch (err: any) {
-      // If logging in with the owner's primary admin email/password on a brand-new database console,
-      // seamlessly register and provision the account in Firebase Auth & Firestore live.
-      if (
-        data.email.toLowerCase() === "asarearthur442@gmail.com" &&
-        data.password === "JayPictures442a@" &&
-        (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password")
-      ) {
-        try {
-          const { createUserWithEmailAndPassword } = await import("firebase/auth");
-          const { doc, setDoc, serverTimestamp } = await import("firebase/firestore");
-          const { db } = await import("../lib/firebase");
-          
-          const { user } = await createUserWithEmailAndPassword(auth, data.email, data.password);
-          await setDoc(doc(db, "users", user.uid), {
-            fullName: "Asare Arthur (Owner & Admin)",
-            email: data.email,
-            role: "admin",
-            createdAt: serverTimestamp(),
-          });
-          
-          navigate("/");
-          return;
-        } catch (createErr: any) {
-          console.error("Seamless admin registration failed:", createErr);
-        }
-      }
-
       let msg = err.message || "Failed to sign in";
       if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
         msg = "Invalid email or password. If you haven't created your account yet, please register first using the link at the bottom of the page.";
