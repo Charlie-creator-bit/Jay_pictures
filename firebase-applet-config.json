@@ -1,10 +1,10 @@
 {
-  "projectId": "true-triumph-f8gvj",
-  "appId": "1:781842441118:web:e4bad48acd2df686cf6c8f",
-  "apiKey": "AIzaSyAE5XmsZjl9i4Ol9C2GUqZDaWYjYDnKpGU",
-  "authDomain": "true-triumph-f8gvj.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-9fc064b1-2e08-41e4-aa87-f192c011c4d0",
-  "storageBucket": "true-triumph-f8gvj.firebasestorage.app",
-  "messagingSenderId": "781842441118",
-  "measurementId": ""
+  "projectId": "jaypictures",
+  "appId": "1:124347611382:web:2b79775685448080b914d7",
+  "apiKey": "AIzaSyDm-IP_zVD98r2vzp4Pz5YMTbMcJXYGsIc",
+  "authDomain": "jaypictures.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "jaypictures.firebasestorage.app",
+  "messagingSenderId": "124347611382",
+  "measurementId": "G-FKX67VK3M5"
 }

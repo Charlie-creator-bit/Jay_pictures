@@ -56,7 +56,7 @@ export default function Pricing() {
                   {tiers.slice(0, 2).map((tier) => (
                     <div key={tier.name} className="flex justify-between items-baseline border-b border-white/10 pb-3 mb-6">
                       <span className="text-xs uppercase tracking-widest">{tier.name}</span>
-                      <span className="text-xl font-serif text-luxury-gold">${tier.price}+</span>
+                      <span className="text-xl font-serif text-luxury-gold">GH₵{tier.price}+</span>
                     </div>
                   ))}
                 </div>

@@ -239,7 +239,7 @@ export default function PaymentCallback() {
                       <tr className="border-b border-white/10 text-white/40 print:border-black/10 print:text-black/60 uppercase text-[9px] tracking-wider">
                         <th className="py-3 font-bold">Description</th>
                         <th className="py-3 text-right font-bold">Qty</th>
-                        <th className="py-3 text-right font-bold">Unit Price (USD)</th>
+                        <th className="py-3 text-right font-bold">Unit Price (GHS)</th>
                         <th className="py-3 text-right font-bold">Amount Paid ({paymentData?.currency})</th>
                       </tr>
                     </thead>
@@ -250,7 +250,7 @@ export default function PaymentCallback() {
                           <p className="text-[10px] text-white/40 print:text-black/50 mt-0.5">Securely reserved date/time slot. Backdrops, lightning design & creative guidance included.</p>
                         </td>
                         <td className="py-4 text-right font-mono">1</td>
-                        <td className="py-4 text-right font-mono">${paymentData?.amount ? (paymentData.amount * 2).toLocaleString() : "N/A"}</td>
+                        <td className="py-4 text-right font-mono">GH₵{paymentData?.amount ? (paymentData.amount * 2).toLocaleString() : "N/A"}</td>
                         <td className="py-4 text-right font-mono text-[#d4af37] font-bold">
                           {paymentData?.currency} {paymentData?.amount?.toLocaleString()}
                         </td>
@@ -269,11 +269,11 @@ export default function PaymentCallback() {
                 <div className="w-full sm:w-64 font-mono text-xs space-y-2 border-l border-white/10 pl-6 print:border-black/10">
                   <div className="flex justify-between">
                     <span className="text-white/50 print:text-black/50">Base Package Cost:</span>
-                    <span className="text-white print:text-black">${paymentData?.amount ? (paymentData.amount * 2).toLocaleString() : "0.00"}</span>
+                    <span className="text-white print:text-black">GH₵{paymentData?.amount ? (paymentData.amount * 2).toLocaleString() : "0.00"}</span>
                   </div>
                   <div className="flex justify-between border-b border-white/5 pb-2 print:border-black/5">
                     <span className="text-white/50 print:text-black/50">Deposit Received:</span>
-                    <span className="text-white print:text-black">-${paymentData?.amount?.toLocaleString()}</span>
+                    <span className="text-white print:text-black">-GH₵{paymentData?.amount?.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm pt-2">
                     <span className="text-[#d4af37] font-bold print:text-black">TOTAL PAID:</span>
@@ -282,7 +282,7 @@ export default function PaymentCallback() {
                     </span>
                   </div>
                   <div className="flex justify-between text-[10px] text-white/40 print:text-black/40">
-                    <span>Rate conversion to USD:</span>
+                    <span>Rate conversion to GHS:</span>
                     <span>1:1 Equivalent</span>
                   </div>
                 </div>

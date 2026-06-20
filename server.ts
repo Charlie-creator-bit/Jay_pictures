@@ -35,15 +35,41 @@ app.use(
 let dbInstance: admin.firestore.Firestore | null = null;
 function getDb() {
   if (!dbInstance) {
+    const isCustom = !!(
+      process.env.VITE_FIREBASE_PROJECT_ID &&
+      process.env.VITE_FIREBASE_API_KEY &&
+      process.env.VITE_FIREBASE_APP_ID
+    );
+
+    const config = isCustom
+      ? {
+          projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+          firestoreDatabaseId: process.env.VITE_FIREBASE_DATABASE_ID || "(default)",
+        }
+      : firebaseConfig;
+
     if (admin.apps.length === 0) {
-      admin.initializeApp({
-        projectId: firebaseConfig.projectId,
-      });
+      const options: admin.AppOptions = {
+        projectId: config.projectId,
+      };
+
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.VITE_FIREBASE_PRIVATE_KEY;
+      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || process.env.VITE_FIREBASE_CLIENT_EMAIL;
+
+      if (privateKey && clientEmail) {
+        options.credential = admin.credential.cert({
+          projectId: config.projectId,
+          clientEmail: clientEmail,
+          privateKey: privateKey.replace(/\\n/g, "\n"),
+        });
+      }
+
+      admin.initializeApp(options);
     }
     try {
       dbInstance = new admin.firestore.Firestore({
-        projectId: firebaseConfig.projectId,
-        databaseId: firebaseConfig.firestoreDatabaseId,
+        projectId: config.projectId,
+        databaseId: config.firestoreDatabaseId,
       });
     } catch {
       dbInstance = admin.firestore();

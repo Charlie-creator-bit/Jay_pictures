@@ -13,7 +13,7 @@ const serviceCategories = [
     icon: <Camera className="w-10 h-10 text-[#d4af37]" />,
     title: "Cinematic Portraits",
     subtitle: "Character & Narrative Depth",
-    price: "$1,500+",
+    price: "GH₵1,500+",
     duration: "4 - 6 Hours",
     description: "High-end portraiture focused on character and narrative depth using advanced studio lighting, classical chiaroscuro, and custom color grading templates. Ideal for artists, actors, executives, and visionaries.",
     features: [
@@ -31,7 +31,7 @@ const serviceCategories = [
     icon: <Palette className="w-10 h-10 text-[#d4af37]" />,
     title: "Fine Art Direction",
     subtitle: "Tailored Conceptual Set Design",
-    price: "$5,000+",
+    price: "GH₵5,000+",
     duration: "Full Production Setup",
     description: "Tailored fine art sets and creative direction matching your custom storytelling. We design sets, style wardrobes, and craft an overall aesthetic language to produce print-quality visual paintings.",
     features: [
@@ -49,7 +49,7 @@ const serviceCategories = [
     icon: <Video className="w-10 h-10 text-[#d4af37]" />,
     title: "Fashion Films",
     subtitle: "Premium 8K Cinematography",
-    price: "$3,500+",
+    price: "GH₵3,500+",
     duration: "1 - 2 Shoot Days",
     description: "High-contrast, high-end motion narrative packages capturing movement, texture, and brand message. Crafted in supreme Red/Arri 8k resolution with fully-licensed custom cinematic scores.",
     features: [
@@ -67,7 +67,7 @@ const serviceCategories = [
     icon: <ImageIcon className="w-10 h-10 text-[#d4af37]" />,
     title: "Archival Printing",
     subtitle: "Museum Grade Exhibition Formats",
-    price: "$750+",
+    price: "GH₵750+",
     duration: "Finishing Suite",
     description: "Meticulous physical translation of digital imagery to real-world mediums. We employ high-end giclée pigment printers and Hahnemühle papers to ensure gallery-grade dynamic range and a lifetime of archival longevity.",
     features: [
