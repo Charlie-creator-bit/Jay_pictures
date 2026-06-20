@@ -1010,6 +1010,145 @@ app.post("/api/notifications/password-reset", async (req: any, res: any) => {
   }
 });
 
+/**
+ * 7. Dispatch Password Reset Link via SMS
+ */
+app.post("/api/notifications/password-reset-sms", async (req: any, res: any) => {
+  try {
+    const { email, phone } = req.body;
+    if (!email && !phone) {
+      return res.status(400).json({ error: "Please enter your email or registered phone number." });
+    }
+
+    const firestore = getDb();
+    let emailToUse = "";
+    let phoneToUse = "";
+    let fullNameToUse = "Esteemed Client";
+    let found = false;
+
+    if (email) {
+      // Look up in Firestore collection first
+      const snapshot = await firestore.collection("users").where("email", "==", email).get();
+      if (!snapshot.empty) {
+        const data = snapshot.docs[0].data();
+        emailToUse = data.email || email;
+        phoneToUse = data.phoneNumber || data.phone || "";
+        fullNameToUse = data.fullName || data.name || "Esteemed Client";
+        found = true;
+      } else {
+        // Fallback to Firebase auth lookup
+        try {
+          const userRecord = await admin.auth().getUserByEmail(email);
+          emailToUse = email;
+          fullNameToUse = userRecord.displayName || "Esteemed Client";
+          phoneToUse = userRecord.phoneNumber || "";
+          found = true;
+        } catch (authErr) {
+          console.warn("Could not find user via email in auth:", email);
+        }
+      }
+    } else if (phone) {
+      // Formatter helper to match user styles
+      const cleanPhone = phone.trim();
+      let snapshot = await firestore.collection("users").where("phoneNumber", "==", cleanPhone).get();
+      if (snapshot.empty) {
+        snapshot = await firestore.collection("users").where("phone", "==", cleanPhone).get();
+      }
+
+      if (!snapshot.empty) {
+        const data = snapshot.docs[0].data();
+        emailToUse = data.email || "";
+        phoneToUse = cleanPhone;
+        fullNameToUse = data.fullName || data.name || "Esteemed Client";
+        found = true;
+      } else {
+        // Fallback standard auth phone records lookup
+        try {
+          const userRecord = await admin.auth().getUserByPhoneNumber(cleanPhone);
+          emailToUse = userRecord.email || "";
+          phoneToUse = cleanPhone;
+          fullNameToUse = userRecord.displayName || "Esteemed Client";
+          found = true;
+        } catch (authErr) {
+          console.warn("Could not find user via phone in auth:", cleanPhone);
+        }
+      }
+    }
+
+    if (!found || !emailToUse) {
+      return res.status(404).json({ 
+        error: "No account matched those credentials. Please check spelling or contact support." 
+      });
+    }
+
+    // Check if we have a phone number to send to
+    const finalPhone = phone || phoneToUse;
+    if (!finalPhone) {
+      return res.status(400).json({
+        error: `Account found for ${emailToUse}, but no phone number stands registered. You can recover via standard email mode, or write both fields.`
+      });
+    }
+
+    // Generate real Firebase secure reset link
+    const resetLink = await admin.auth().generatePasswordResetLink(emailToUse);
+    const smsMessage = `JAY PICTURES: Hello ${fullNameToUse}. Reset your secure password: ${resetLink}`;
+
+    // Verify Twilio dynamic configuration from env
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const fromPhone = process.env.TWILIO_FROM || process.env.TWILIO_PHONE_NUMBER;
+
+    let isTwilioSent = false;
+    let twilioError = "";
+
+    if (accountSid && authToken && fromPhone) {
+      try {
+        const authString = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+        const twilioRes = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Basic ${authString}`,
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: new URLSearchParams({
+            Body: smsMessage,
+            From: fromPhone,
+            To: finalPhone
+          }).toString()
+        });
+
+        const twilioData = await twilioRes.json();
+        if (twilioRes.ok) {
+          isTwilioSent = true;
+        } else {
+          twilioError = twilioData.message || "Twilio gateway rejection.";
+        }
+      } catch (smsErr: any) {
+        twilioError = smsErr.message || "Twilio transport exception.";
+      }
+    }
+
+    return res.json({
+      success: true,
+      simulated: !isTwilioSent,
+      recipient: {
+        email: emailToUse,
+        phone: finalPhone,
+        fullName: fullNameToUse
+      },
+      resetLink,
+      message: isTwilioSent 
+        ? "Secure reset link successfully dispatched via real SMS carrier." 
+        : "SMS recovery link compiled in sandboxed environment.",
+      smsContent: smsMessage,
+      errorDetail: twilioError || undefined
+    });
+  } catch (err: any) {
+    console.error("SMS password reset process crash:", err);
+    return res.status(500).json({ error: err.message || "Internal password-reset service error." });
+  }
+});
+
 
 // -------------------------------------------------------------
 // VITE OR STATIC CONTENT MIDDLEWARE SETUP
