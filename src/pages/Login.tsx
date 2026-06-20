@@ -22,27 +22,10 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<"client" | "admin">("client");
-  const [adminClaimed, setAdminClaimed] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
-
-  useEffect(() => {
-    const checkAdminClaimed = async () => {
-      try {
-        const q = query(collection(db, "users"), where("role", "==", "admin"), limit(1));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          setAdminClaimed(true);
-        }
-      } catch (err) {
-        console.warn("Could not query admin collection status", err);
-      }
-    };
-    checkAdminClaimed();
-  }, []);
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
@@ -88,8 +71,30 @@ export default function Login() {
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      navigate("/");
+      const result = await signInWithPopup(auth, provider);
+      
+      const ADMIN_EMAILS = [
+        "charlesadu3112@gmail.com",
+        "admin@jaypictures.com",
+        "asarearthur442@gmail.com"
+      ];
+      
+      let userRole = "client";
+      try {
+        const docRef = doc(db, "users", result.user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          userRole = docSnap.data().role || "client";
+        }
+      } catch (dbErr) {
+        console.warn("Could not fetch user role during routing:", dbErr);
+      }
+
+      if (userRole === "admin" || ADMIN_EMAILS.includes(result.user.email?.toLowerCase() || "")) {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     } catch (err: any) {
       console.error("Google sign in verification error:", err);
       let msg = err.message || "Google sign in failed";
@@ -122,53 +127,11 @@ export default function Login() {
           <p className="text-white/40 mt-2">Sign in to your luxury archive</p>
         </div>
 
-        {/* Access Mode Selector - Displayed only if no admin exists yet */}
-        {!adminClaimed ? (
-          <div className="grid grid-cols-2 p-1 bg-white/5 border border-white/10 rounded-xl mb-6">
-            <button
-              type="button"
-              onClick={() => setSelectedRole("client")}
-              className={`py-2.5 text-[10px] uppercase tracking-widest font-bold transition-all rounded-lg cursor-pointer ${
-                selectedRole === "client"
-                  ? "bg-luxury-gold text-luxury-black font-extrabold shadow-lg"
-                  : "text-white/60 hover:text-white"
-              }`}
-            >
-              Client Patron
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedRole("admin")}
-              className={`py-2.5 text-[10px] uppercase tracking-widest font-bold transition-all rounded-lg cursor-pointer ${
-                selectedRole === "admin"
-                  ? "bg-luxury-gold text-luxury-black font-extrabold shadow-lg"
-                  : "text-white/60 hover:text-white"
-              }`}
-            >
-              System Admin
-            </button>
-          </div>
-        ) : (
-          <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 mb-6 text-center text-white/40 text-[9px] uppercase tracking-widest font-mono select-none">
-            🔒 Primary Admin Established • Public Access Enabled
-          </div>
-        )}
-
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {error && (
             <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3 text-red-500 text-sm">
               <AlertCircle className="w-5 h-5 shrink-0" />
               {error}
-            </div>
-          )}
-
-          {selectedRole === "admin" && !adminClaimed && (
-            <div className="p-4 bg-luxury-gold/5 border border-luxury-gold/20 rounded-xl flex items-start gap-3 text-luxury-gold text-xs leading-relaxed">
-              <ShieldAlert className="w-5 h-5 shrink-0 text-luxury-gold mt-0.5" />
-              <div>
-                <span className="font-bold uppercase tracking-wider block mb-0.5">Admin Security Lock</span>
-                Logging in through primary Admin channels is reserved for system setup. Post initialization, this selector is hidden permanently.
-              </div>
             </div>
           )}
 
@@ -227,11 +190,7 @@ export default function Login() {
           </div>
 
           <Button type="submit" disabled={isLoading} className="w-full py-4 text-xs font-bold uppercase tracking-widest">
-            {isLoading 
-              ? "Signing in..." 
-              : selectedRole === "admin" && !adminClaimed 
-                ? "Sign In as Admin" 
-                : "Sign In"}
+            {isLoading ? "Signing in..." : "Sign In"}
           </Button>
 
           <div className="relative py-4">
