@@ -523,45 +523,26 @@ export default function Book() {
           console.error("Error fetching services from Firestore:", err);
         }
 
-        // Robust delta seeding check to repair prices and write missing ones
+        // 1. Immediately build the full merged service list to display to the user without blocking
         const existingIds = new Set(serviceList.map(s => s.id));
-        const missingOrMismatched = defaultServices.filter(svc => {
-          if (!existingIds.has(svc.id)) return true;
-          // Repair price if it exists in DB as legacy high numbers (indicating in Cedis instead of standard USD base)
-          const matchedDB = serviceList.find(s => s.id === svc.id);
-          return matchedDB && matchedDB.price > 150 && svc.price <= 150; // true means we override & repair
-        });
-
-        if (missingOrMismatched.length > 0) {
-          for (const svc of missingOrMismatched) {
-            try {
-              await setDoc(doc(db, "services", svc.id), {
-                title: svc.title,
-                price: svc.price,
-                durationMinutes: svc.durationMinutes,
-                description: svc.description,
-                isActive: svc.isActive,
-                createdAt: serverTimestamp(),
-              });
-              
-              // Correct the list item
-              const idxInList = serviceList.findIndex(s => s.id === svc.id);
-              if (idxInList !== -1) {
-                serviceList[idxInList] = svc;
-              } else {
-                serviceList.push(svc);
-              }
-            } catch (seedErr) {
-              console.warn(`Bypassed seeding for service ${svc.id}:`, seedErr);
+        const finalServices = [...serviceList];
+        
+        // Ensure any default service not in the database yet is available in memory
+        defaultServices.forEach(svc => {
+          if (!existingIds.has(svc.id)) {
+            finalServices.push(svc);
+          } else {
+            // If the price is mismatched (e.g., legacy currency conversion issue), repair it in memory
+            const idx = finalServices.findIndex(s => s.id === svc.id);
+            if (idx !== -1 && finalServices[idx].price > 150 && svc.price <= 150) {
+              finalServices[idx] = svc;
             }
           }
-        }
+        });
 
-        // If serviceList is empty, fall back to defaultServices so the UI is NEVER empty!
-        const finalServices = serviceList.length > 0 ? serviceList : defaultServices;
+        // Set state and select initial package
         setServices(finalServices);
 
-        // Pre-select package if matching parameter found
         if (preSelectedServiceId) {
           const matched = finalServices.find(s => s.id === preSelectedServiceId || s.title.toLowerCase().includes(preSelectedServiceId.toLowerCase()));
           if (matched) {
@@ -570,7 +551,36 @@ export default function Book() {
             setActiveCategory(categoryMatched);
           }
         }
+        
+        // Hide loading indicator instantly!
         setLoadingServices(false);
+
+        // 2. Perform any needed Firestore seeding/repair in the background asynchronously
+        const missingOrMismatched = defaultServices.filter(svc => {
+          if (!existingIds.has(svc.id)) return true;
+          const matchedDB = serviceList.find(s => s.id === svc.id);
+          return matchedDB && matchedDB.price > 150 && svc.price <= 150;
+        });
+
+        if (missingOrMismatched.length > 0) {
+          // Process all missing/mismatched documents in parallel without blocking the main thread
+          Promise.all(
+            missingOrMismatched.map(async (svc) => {
+              try {
+                await setDoc(doc(db, "services", svc.id), {
+                  title: svc.title,
+                  price: svc.price,
+                  durationMinutes: svc.durationMinutes,
+                  description: svc.description,
+                  isActive: svc.isActive,
+                  createdAt: serverTimestamp(),
+                });
+              } catch (seedErr) {
+                console.warn(`Bypassed seeding for service ${svc.id}:`, seedErr);
+              }
+            })
+          ).catch(err => console.warn("Background seeding error:", err));
+        }
     };
     fetchServices();
   }, [preSelectedServiceId, user]);
