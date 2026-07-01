@@ -7,7 +7,7 @@ import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 
 import { doc, getDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { Link, useNavigate } from "react-router-dom";
-import { Camera, Mail, Lock, AlertCircle, Eye, EyeOff, ShieldAlert } from "lucide-react";
+import { Camera, Mail, Lock, AlertCircle, Eye, EyeOff, ShieldAlert, CheckCircle } from "lucide-react";
 import Button from "../components/ui/Button";
 
 const loginSchema = z.object({
@@ -22,6 +22,27 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [successRole, setSuccessRole] = useState<string>("client");
+  const [loggedInName, setLoggedInName] = useState<string>("");
+
+  useEffect(() => {
+    if (isSuccess) {
+      const timer = setTimeout(() => {
+        const ADMIN_EMAILS = [
+          "charlesadu3112@gmail.com",
+          "admin@jaypictures.com",
+          "asarearthur442@gmail.com"
+        ];
+        if (successRole === "admin" || ADMIN_EMAILS.includes(auth.currentUser?.email?.toLowerCase() || "")) {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccess, successRole, navigate]);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -40,21 +61,25 @@ export default function Login() {
       ];
       
       let userRole = "client";
+      let fullName = "";
       try {
         const docRef = doc(db, "users", result.user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           userRole = docSnap.data().role || "client";
+          fullName = docSnap.data().fullName || "";
         }
       } catch (dbErr) {
         console.warn("Could not fetch user role during routing:", dbErr);
       }
 
-      if (userRole === "admin" || ADMIN_EMAILS.includes(result.user.email?.toLowerCase() || "")) {
-        navigate("/admin");
-      } else {
-        navigate("/");
+      if (!fullName) {
+        fullName = result.user.displayName || result.user.email?.split("@")[0] || "Esteemed Client";
       }
+
+      setLoggedInName(fullName);
+      setSuccessRole(userRole);
+      setIsSuccess(true);
     } catch (err: any) {
       let msg = err.message || "Failed to sign in";
       if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
@@ -80,21 +105,25 @@ export default function Login() {
       ];
       
       let userRole = "client";
+      let fullName = "";
       try {
         const docRef = doc(db, "users", result.user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           userRole = docSnap.data().role || "client";
+          fullName = docSnap.data().fullName || "";
         }
       } catch (dbErr) {
         console.warn("Could not fetch user role during routing:", dbErr);
       }
 
-      if (userRole === "admin" || ADMIN_EMAILS.includes(result.user.email?.toLowerCase() || "")) {
-        navigate("/admin");
-      } else {
-        navigate("/");
+      if (!fullName) {
+        fullName = result.user.displayName || result.user.email?.split("@")[0] || "Esteemed Client";
       }
+
+      setLoggedInName(fullName);
+      setSuccessRole(userRole);
+      setIsSuccess(true);
     } catch (err: any) {
       console.error("Google sign in verification error:", err);
       let msg = err.message || "Google sign in failed";
@@ -112,116 +141,190 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-luxury-black px-6 py-12">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
-      >
-        <div className="text-center mb-10">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <Camera className="w-8 h-8 text-luxury-gold" />
-            <span className="text-2xl font-serif tracking-tighter text-luxury-gold">JAY PICTURES</span>
-          </Link>
-          <h2 className="text-3xl font-display text-white">Welcome Back</h2>
-          <p className="text-white/40 mt-2">Sign in to your luxury archive</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-luxury-black px-6 py-12 relative overflow-hidden">
+      {/* Decorative Gold Glow Ambient Light */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[350px] h-[350px] bg-luxury-gold/5 blur-[100px] rounded-full pointer-events-none" />
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3 text-red-500 text-sm">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
-              <input
-                {...register("email")}
-                className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-luxury-gold transition-colors"
-                placeholder="studio@example.com"
-              />
-            </div>
-            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+      {isSuccess ? (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="w-full max-w-md text-center p-8 bg-white/[0.02] border border-luxury-gold/20 rounded-2xl shadow-2xl relative z-10 backdrop-blur-xl"
+        >
+          {/* Confetti / Animated Success Ring */}
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
+              className="w-full h-full rounded-full bg-luxury-gold/10 border border-luxury-gold/30 flex items-center justify-center text-luxury-gold"
+            >
+              <CheckCircle className="w-10 h-10" />
+            </motion.div>
+            <span className="absolute inset-0 rounded-full border border-luxury-gold/20 animate-ping opacity-75" />
           </div>
 
-          <div>
-            <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">Password</label>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-luxury-gold transition-colors focus:outline-none z-10"
-                title={showPassword ? "Hide password" : "Show password"}
-                id="login-password-left-toggle"
-              >
-                {showPassword ? (
-                  <Eye className="w-5 h-5" />
-                ) : (
-                  <Lock className="w-5 h-5" />
-                )}
-              </button>
-              <input
-                {...register("password")}
-                type={showPassword ? "text" : "password"}
-                className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-12 pr-12 text-white focus:outline-none focus:border-luxury-gold transition-colors"
-                placeholder="••••••••"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-luxury-gold transition-colors focus:outline-none z-10"
-                title={showPassword ? "Hide password" : "Show password"}
-                id="login-password-right-toggle"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Link to="/forgot-password" title="Recover password" label="recover password" id="forgot-password-link" className="text-xs text-white/40 hover:text-luxury-gold transition-colors">
-              Forgot password?
-            </Link>
-          </div>
-
-          <Button type="submit" disabled={isLoading} className="w-full py-4 text-xs font-bold uppercase tracking-widest">
-            {isLoading ? "Signing in..." : "Sign In"}
-          </Button>
-
-          <div className="relative py-4">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
-            <div className="relative flex justify-center text-xs uppercase tracking-widest"><span className="bg-luxury-black px-4 text-white/20">Or continue with</span></div>
-          </div>
-
-          <button
-            type="button"
-            onClick={signInWithGoogle}
-            className="w-full py-4 border border-white/10 rounded-lg flex items-center justify-center gap-3 text-white/60 hover:bg-white/5 transition-all text-xs font-bold uppercase tracking-widest cursor-pointer"
+          <motion.h3
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-2xl font-serif text-white mb-2"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-              <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-            </svg>
-            Google
-          </button>
-          
-          <p className="text-[10px] text-white/30 text-center mt-2 leading-relaxed italic">
-            * Pop-ups are blocked by standard browser safety policies within embedded preview frames. If using Google login, please ensure you open the app in a new tab/window using the external arrow button.
-          </p>
-        </form>
+            Congratulations!
+          </motion.h3>
 
-        <p className="text-center mt-10 text-white/40 text-xs uppercase tracking-widest">
-          Don't have an account?{" "}
-          <Link to="/register" className="text-luxury-gold font-bold hover:underline">Register</Link>
-        </p>
-      </motion.div>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-white/80 text-sm mb-8 leading-relaxed font-sans"
+          >
+            You have successfully logged in as <span className="text-luxury-gold font-bold">{loggedInName}</span>. We are taking you straight to your luxury photography archive.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="space-y-4"
+          >
+            <Button
+              onClick={() => {
+                const ADMIN_EMAILS = [
+                  "charlesadu3112@gmail.com",
+                  "admin@jaypictures.com",
+                  "asarearthur442@gmail.com"
+                ];
+                if (successRole === "admin" || ADMIN_EMAILS.includes(auth.currentUser?.email?.toLowerCase() || "")) {
+                  navigate("/admin");
+                } else {
+                  navigate("/");
+                }
+              }}
+              className="w-full py-3.5 text-xs font-bold uppercase tracking-widest bg-luxury-gold hover:bg-white text-luxury-black rounded-lg transition-colors cursor-pointer"
+            >
+              Enter Dashboard Now
+            </Button>
+            
+            <div className="flex items-center justify-center gap-2 text-white/30 text-[9px] uppercase tracking-widest font-mono">
+              <span className="w-1.5 h-1.5 bg-luxury-gold rounded-full animate-pulse" />
+              Redirecting automatically...
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="w-full max-w-md relative z-10"
+        >
+          <div className="text-center mb-10">
+            <Link to="/" className="inline-flex items-center gap-2 mb-6">
+              <Camera className="w-8 h-8 text-luxury-gold" />
+              <span className="text-2xl font-serif tracking-tighter text-luxury-gold">JAY PICTURES</span>
+            </Link>
+            <h2 className="text-3xl font-display text-white">Welcome Back</h2>
+            <p className="text-white/40 mt-2">Sign in to your luxury archive</p>
+          </div>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {error && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3 text-red-500 text-sm">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
+                <input
+                  {...register("email")}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-luxury-gold transition-colors"
+                  placeholder="studio@example.com"
+                />
+              </div>
+              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest font-bold text-luxury-gold mb-2">Password</label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-luxury-gold transition-colors focus:outline-none z-10"
+                  title={showPassword ? "Hide password" : "Show password"}
+                  id="login-password-left-toggle"
+                >
+                  {showPassword ? (
+                    <Eye className="w-5 h-5" />
+                  ) : (
+                    <Lock className="w-5 h-5" />
+                  )}
+                </button>
+                <input
+                  {...register("password")}
+                  type={showPassword ? "text" : "password"}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-12 pr-12 text-white focus:outline-none focus:border-luxury-gold transition-colors"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-luxury-gold transition-colors focus:outline-none z-10"
+                  title={showPassword ? "Hide password" : "Show password"}
+                  id="login-password-right-toggle"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Link to="/forgot-password" title="Recover password" label="recover password" id="forgot-password-link" className="text-xs text-white/40 hover:text-luxury-gold transition-colors">
+                Forgot password?
+              </Link>
+            </div>
+
+            <Button type="submit" disabled={isLoading} className="w-full py-4 text-xs font-bold uppercase tracking-widest">
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+              <div className="relative flex justify-center text-xs uppercase tracking-widest"><span className="bg-luxury-black px-4 text-white/20">Or continue with</span></div>
+            </div>
+
+            <button
+              type="button"
+              onClick={signInWithGoogle}
+              className="w-full py-4 border border-white/10 rounded-lg flex items-center justify-center gap-3 text-white/60 hover:bg-white/5 transition-all text-xs font-bold uppercase tracking-widest cursor-pointer"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+              </svg>
+              Google
+            </button>
+            
+            <p className="text-[10px] text-white/30 text-center mt-2 leading-relaxed italic">
+              * Pop-ups are blocked by standard browser safety policies within embedded preview frames. If using Google login, please ensure you open the app in a new tab/window using the external arrow button.
+            </p>
+          </form>
+
+          <p className="text-center mt-10 text-white/40 text-xs uppercase tracking-widest">
+            Don't have an account?{" "}
+            <Link to="/register" className="text-luxury-gold font-bold hover:underline">Register</Link>
+          </p>
+        </motion.div>
+      )}
     </div>
   );
 }
